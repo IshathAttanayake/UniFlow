@@ -1,0 +1,52 @@
+[33mc98b766[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Initial Expo project setup
+ .gitignore                                |   51 [32m+[m
+ LICENSE                                   |   21 [32m+[m
+ README.md                                 |   56 [32m+[m
+ app.json                                  |   42 [32m+[m
+ assets/expo.icon/Assets/expo-symbol 2.svg |    3 [32m+[m
+ assets/expo.icon/Assets/grid.png          |  Bin [31m0[m -> [32m53681[m bytes
+ assets/expo.icon/icon.json                |   40 [32m+[m
+ assets/images/android-icon-background.png |  Bin [31m0[m -> [32m17549[m bytes
+ assets/images/android-icon-foreground.png |  Bin [31m0[m -> [32m78796[m bytes
+ assets/images/android-icon-monochrome.png |  Bin [31m0[m -> [32m4140[m bytes
+ assets/images/expo-badge-white.png        |  Bin [31m0[m -> [32m4129[m bytes
+ assets/images/expo-badge.png              |  Bin [31m0[m -> [32m4137[m bytes
+ assets/images/expo-logo.png               |  Bin [31m0[m -> [32m3317[m bytes
+ assets/images/favicon.png                 |  Bin [31m0[m -> [32m1129[m bytes
+ assets/images/icon.png                    |  Bin [31m0[m -> [32m799005[m bytes
+ assets/images/logo-glow.png               |  Bin [31m0[m -> [32m331624[m bytes
+ assets/images/react-logo.png              |  Bin [31m0[m -> [32m6341[m bytes
+ assets/images/react-logo@2x.png           |  Bin [31m0[m -> [32m14225[m bytes
+ assets/images/react-logo@3x.png           |  Bin [31m0[m -> [32m21252[m bytes
+ assets/images/splash-icon.png             |  Bin [31m0[m -> [32m3317[m bytes
+ assets/images/tabIcons/explore.png        |  Bin [31m0[m -> [32m215[m bytes
+ assets/images/tabIcons/explore@2x.png     |  Bin [31m0[m -> [32m347[m bytes
+ assets/images/tabIcons/explore@3x.png     |  Bin [31m0[m -> [32m468[m bytes
+ assets/images/tabIcons/home.png           |  Bin [31m0[m -> [32m253[m bytes
+ assets/images/tabIcons/home@2x.png        |  Bin [31m0[m -> [32m343[m bytes
+ assets/images/tabIcons/home@3x.png        |  Bin [31m0[m -> [32m479[m bytes
+ assets/images/tutorial-web.png            |  Bin [31m0[m -> [32m58959[m bytes
+ package-lock.json                         | 7862 [32m+++++++++++++++++++++++++++++[m
+ package.json                              |   43 [32m+[m
+ scripts/reset-project.js                  |  114 [32m+[m
+ src/app/_layout.tsx                       |   18 [32m+[m
+ src/app/explore.tsx                       |  180 [32m+[m
+ src/app/index.tsx                         |   98 [32m+[m
+ src/components/animated-icon.module.css   |    6 [32m+[m
+ src/components/animated-icon.tsx          |  148 [32m+[m
+ src/components/animated-icon.web.tsx      |  108 [32m+[m
+ src/components/app-tabs.tsx               |   32 [32m+[m
+ src/components/app-tabs.web.tsx           |  115 [32m+[m
+ src/components/external-link.tsx          |   25 [32m+[m
+ src/components/hint-row.tsx               |   35 [32m+[m
+ src/components/themed-text.tsx            |   73 [32m+[m
+ src/components/themed-view.tsx            |   16 [32m+[m
+ src/components/ui/collapsible.tsx         |   65 [32m+[m
+ src/components/web-badge.tsx              |   43 [32m+[m
+ src/constants/theme.ts                    |   65 [32m+[m
+ src/global.css                            |    9 [32m+[m
+ src/hooks/use-color-scheme.ts             |    1 [32m+[m
+ src/hooks/use-color-scheme.web.ts         |   21 [32m+[m
+ src/hooks/use-theme.ts                    |   14 [32m+[m
+ tsconfig.json                             |   20 [32m+[m
+ 50 files changed, 9324 insertions(+)

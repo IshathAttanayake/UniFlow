@@ -1,0 +1,28 @@
+import { StyleSheet, Text, View } from "react-native";
+
+export default function ProfileScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>👤 Profile</Text>
+      <Text style={styles.subtitle}>Your student information will appear here.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  subtitle: {
+    marginTop: 8,
+    color: "#64748B",
+  },
+});

@@ -10,22 +10,30 @@ const courses = [
   {
     code: "IT2010",
     name: "Database Management Systems",
-    credits: 3,
+    lecturer: "Dr. Perera",
+    progress: 75,
+    status: "In Progress",
   },
   {
     code: "IT2020",
     name: "Object Oriented Programming",
-    credits: 3,
+    lecturer: "Mr. Fernando",
+    progress: 60,
+    status: "In Progress",
   },
   {
     code: "IT2030",
     name: "Software Engineering",
-    credits: 3,
+    lecturer: "Ms. Silva",
+    progress: 85,
+    status: "In Progress",
   },
   {
     code: "IT2040",
     name: "Data Structures & Algorithms",
-    credits: 3,
+    lecturer: "Dr. Kumar",
+    progress: 45,
+    status: "In Progress",
   },
 ];
 
@@ -49,25 +57,53 @@ export default function CoursesScreen() {
               style={styles.courseCard}
               activeOpacity={0.8}
             >
-              <View style={styles.iconContainer}>
-                <Text style={styles.icon}>BOOK</Text>
+              <View style={styles.topRow}>
+                <View style={styles.iconContainer}>
+                  <Text style={styles.icon}>COURSE</Text>
+                </View>
+
+                <View style={styles.courseInfo}>
+                  <Text style={styles.courseName}>
+                    {course.name}
+                  </Text>
+
+                  <Text style={styles.courseCode}>
+                    {course.code}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.courseInfo}>
-                <Text style={styles.courseName}>
-                  {course.name}
-                </Text>
-
-                <Text style={styles.courseCode}>
-                  {course.code}
-                </Text>
-
-                <Text style={styles.credits}>
-                  {course.credits} Credits
+              <View style={styles.details}>
+                <Text style={styles.label}>Lecturer</Text>
+                <Text style={styles.lecturer}>
+                  {course.lecturer}
                 </Text>
               </View>
 
-              <Text style={styles.arrow}>›</Text>
+              <View style={styles.progressHeader}>
+                <Text style={styles.label}>Progress</Text>
+
+                <Text style={styles.progressText}>
+                  {course.progress}%
+                </Text>
+              </View>
+
+              <View style={styles.progressBackground}>
+                <View
+                  style={[
+                    styles.progressBar,
+                    { width: `${course.progress}%` },
+                  ]}
+                />
+              </View>
+
+              <View style={styles.bottomRow}>
+                <Text style={styles.status}>
+                  {course.status}
+                </Text>
+
+                <Text style={styles.arrow}>›</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -102,23 +138,26 @@ const styles = StyleSheet.create({
   },
 
   courseList: {
-    gap: 14,
+    gap: 16,
   },
 
   courseCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
     padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
 
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 58,
+    height: 58,
+    borderRadius: 15,
     backgroundColor: "#EEF2FF",
     justifyContent: "center",
     alignItems: "center",
@@ -126,8 +165,8 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 9,
+    fontWeight: "800",
     color: "#4F46E5",
   },
 
@@ -136,7 +175,7 @@ const styles = StyleSheet.create({
   },
 
   courseName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: "#111827",
   },
@@ -145,18 +184,66 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#4F46E5",
     fontWeight: "600",
-    marginTop: 4,
+    marginTop: 5,
   },
 
-  credits: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 4,
+  details: {
+    marginTop: 18,
+  },
+
+  label: {
+    fontSize: 12,
+    color: "#94A3B8",
+  },
+
+  lecturer: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#334155",
+    marginTop: 3,
+  },
+
+  progressHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+
+  progressText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#4F46E5",
+  },
+
+  progressBackground: {
+    height: 7,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#4F46E5",
+    borderRadius: 10,
+  },
+
+  bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+  },
+
+  status: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#4F46E5",
   },
 
   arrow: {
-    fontSize: 28,
-    color: "#9CA3AF",
-    marginLeft: 8,
+    fontSize: 26,
+    color: "#94A3B8",
   },
 });

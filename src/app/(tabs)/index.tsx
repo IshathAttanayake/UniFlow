@@ -1,5 +1,46 @@
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+const courses = [
+  {
+    name: "Database Management Systems",
+    code: "IT2040",
+    progress: 78,
+  },
+  {
+    name: "Object Oriented Programming",
+    code: "IT2030",
+    progress: 65,
+  },
+  {
+    name: "Software Engineering",
+    code: "IT2050",
+    progress: 84,
+  },
+];
+
+const assignments = [
+  {
+    title: "Database Assignment",
+    course: "Database Management Systems",
+    due: "Due tomorrow",
+    urgent: true,
+  },
+  {
+    title: "Java OOP Project",
+    course: "Object Oriented Programming",
+    due: "Due in 4 days",
+    urgent: false,
+  },
+];
 
 export default function DashboardScreen() {
   return (
@@ -17,70 +58,170 @@ export default function DashboardScreen() {
             <Text style={styles.name}>Ishath</Text>
           </View>
 
-          <View style={styles.profile}>
+          <TouchableOpacity
+            style={styles.profile}
+            activeOpacity={0.8}
+            onPress={() => router.push("/profile")}
+          >
             <Text style={styles.profileText}>I</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.subtitle}>
           Here's what's happening with your studies today.
         </Text>
 
-        {/* Quick Stats */}
+        {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard number="6" label="Modules" />
-          <StatCard number="3" label="Assignments" />
-          <StatCard number="2" label="Classes" />
+          <StatCard
+            icon="book-outline"
+            number="6"
+            label="Modules"
+          />
+
+          <StatCard
+            icon="document-text-outline"
+            number="3"
+            label="Assignments"
+          />
+
+          <StatCard
+            icon="calendar-outline"
+            number="2"
+            label="Classes"
+          />
         </View>
 
-        {/* GPA Card */}
-        <View style={styles.gpaCard}>
+        {/* Academic Overview */}
+        <View style={styles.overviewCard}>
           <View>
-            <Text style={styles.gpaLabel}>Current GPA</Text>
-            <Text style={styles.gpaValue}>3.42</Text>
+            <Text style={styles.overviewLabel}>
+              Academic Progress
+            </Text>
+
+            <Text style={styles.overviewValue}>74%</Text>
+
+            <Text style={styles.overviewSubtext}>
+              Overall course progress
+            </Text>
           </View>
 
-          <View style={styles.gpaBadge}>
-            <Text style={styles.gpaBadgeText}>Good</Text>
+          <View style={styles.progressCircle}>
+            <Text style={styles.progressCircleText}>74%</Text>
           </View>
         </View>
 
-        {/* Upcoming */}
+        {/* Courses */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming</Text>
-          <TouchableOpacity>
+          <Text style={styles.sectionTitle}>Course Progress</Text>
+
+          <TouchableOpacity
+            onPress={() => router.push("/courses")}
+          >
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.assignmentCard}>
-          <View style={styles.iconBox}>
-            <Text style={styles.icon}>📝</Text>
-          </View>
+        <View style={styles.courseCard}>
+          {courses.map((course, index) => (
+            <View
+              key={course.code}
+              style={[
+                styles.courseRow,
+                index === courses.length - 1 && styles.lastRow,
+              ]}
+            >
+              <View style={styles.courseHeader}>
+                <View style={styles.courseInfo}>
+                  <Text style={styles.courseName}>
+                    {course.name}
+                  </Text>
 
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>Database Assignment</Text>
-            <Text style={styles.cardSubtitle}>Database Management System</Text>
-            <Text style={styles.deadline}>Due tomorrow</Text>
-          </View>
+                  <Text style={styles.courseCode}>
+                    {course.code}
+                  </Text>
+                </View>
+
+                <Text style={styles.coursePercentage}>
+                  {course.progress}%
+                </Text>
+              </View>
+
+              <View style={styles.progressBackground}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${course.progress}%` },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
         </View>
 
-        <View style={styles.assignmentCard}>
-          <View style={styles.iconBox}>
-            <Text style={styles.icon}>💻</Text>
-          </View>
+        {/* Upcoming Assignments */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Upcoming</Text>
 
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>Java OOP Project</Text>
-            <Text style={styles.cardSubtitle}>Object-Oriented Programming</Text>
-            <Text style={styles.deadline}>Due in 4 days</Text>
-          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/assignments")}
+          >
+            <Text style={styles.seeAll}>See all</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Today's Classes */}
-        <Text style={[styles.sectionTitle, styles.classesTitle]}>
-          Today's Classes
-        </Text>
+        {assignments.map((assignment) => (
+          <TouchableOpacity
+            key={assignment.title}
+            style={styles.assignmentCard}
+            activeOpacity={0.8}
+            onPress={() => router.push("/assignments")}
+          >
+            <View style={styles.assignmentIcon}>
+              <Ionicons
+                name="document-text-outline"
+                size={22}
+                color="#4F46E5"
+              />
+            </View>
+
+            <View style={styles.cardInfo}>
+              <Text style={styles.cardTitle}>
+                {assignment.title}
+              </Text>
+
+              <Text style={styles.cardSubtitle}>
+                {assignment.course}
+              </Text>
+
+              <Text
+                style={[
+                  styles.deadline,
+                  !assignment.urgent && styles.normalDeadline,
+                ]}
+              >
+                {assignment.due}
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+        ))}
+
+        {/* Next Class */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Next Class</Text>
+
+          <TouchableOpacity
+            onPress={() => router.push("/schedule")}
+          >
+            <Text style={styles.seeAll}>Schedule</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.classCard}>
           <View style={styles.timeBox}>
@@ -88,9 +229,78 @@ export default function DashboardScreen() {
             <Text style={styles.am}>AM</Text>
           </View>
 
-          <View>
-            <Text style={styles.cardTitle}>Software Engineering</Text>
-            <Text style={styles.cardSubtitle}>Lecture Hall A</Text>
+          <View style={styles.classLine} />
+
+          <View style={styles.classInfo}>
+            <Text style={styles.classTitle}>
+              Software Engineering
+            </Text>
+
+            <Text style={styles.classType}>Lecture</Text>
+
+            <View style={styles.locationRow}>
+              <Ionicons
+                name="location-outline"
+                size={15}
+                color="#64748B"
+              />
+
+              <Text style={styles.location}>
+                Lecture Hall A
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <Text style={[styles.sectionTitle, styles.quickTitle]}>
+          Quick Actions
+        </Text>
+
+        <View style={styles.quickActions}>
+          <QuickAction
+            icon="book-outline"
+            label="Courses"
+            onPress={() => router.push("/courses")}
+          />
+
+          <QuickAction
+            icon="document-text-outline"
+            label="Assignments"
+            onPress={() => router.push("/assignments")}
+          />
+
+          <QuickAction
+            icon="calendar-outline"
+            label="Schedule"
+            onPress={() => router.push("/schedule")}
+          />
+
+          <QuickAction
+            icon="person-outline"
+            label="Profile"
+            onPress={() => router.push("/profile")}
+          />
+        </View>
+
+        {/* Notification */}
+        <View style={styles.notificationCard}>
+          <View style={styles.notificationIcon}>
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color="#4F46E5"
+            />
+          </View>
+
+          <View style={styles.notificationInfo}>
+            <Text style={styles.notificationTitle}>
+              Don't forget your assignment
+            </Text>
+
+            <Text style={styles.notificationText}>
+              Database Assignment is due tomorrow.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -99,17 +309,56 @@ export default function DashboardScreen() {
 }
 
 function StatCard({
+  icon,
   number,
   label,
 }: {
+  icon: any;
   number: string;
   label: string;
 }) {
   return (
     <View style={styles.statCard}>
+      <View style={styles.statIcon}>
+        <Ionicons
+          name={icon}
+          size={18}
+          color="#4F46E5"
+        />
+      </View>
+
       <Text style={styles.statNumber}>{number}</Text>
+
       <Text style={styles.statLabel}>{label}</Text>
     </View>
+  );
+}
+
+function QuickAction({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: any;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.quickAction}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
+      <View style={styles.quickIcon}>
+        <Ionicons
+          name={icon}
+          size={22}
+          color="#4F46E5"
+        />
+      </View>
+
+      <Text style={styles.quickLabel}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -122,7 +371,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
 
   header: {
@@ -163,6 +412,7 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 8,
     marginBottom: 24,
+    lineHeight: 21,
   },
 
   statsRow: {
@@ -174,24 +424,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
+  statIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 9,
+  },
+
   statNumber: {
-    fontSize: 25,
+    fontSize: 24,
     fontWeight: "800",
-    color: "#4F46E5",
+    color: "#111827",
   },
 
   statLabel: {
     fontSize: 12,
     color: "#64748B",
-    marginTop: 4,
+    marginTop: 2,
   },
 
-  gpaCard: {
+  overviewCard: {
     marginTop: 16,
     backgroundColor: "#4F46E5",
     borderRadius: 20,
@@ -201,28 +461,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  gpaLabel: {
+  overviewLabel: {
     color: "#E0E7FF",
     fontSize: 14,
   },
 
-  gpaValue: {
+  overviewValue: {
     color: "#FFFFFF",
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: "800",
+    marginTop: 3,
+  },
+
+  overviewSubtext: {
+    color: "#E0E7FF",
+    fontSize: 12,
     marginTop: 2,
   },
 
-  gpaBadge: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  progressCircle: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    borderWidth: 7,
+    borderColor: "#C7D2FE",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  gpaBadgeText: {
-    color: "#4F46E5",
-    fontWeight: "700",
+  progressCircleText: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "800",
   },
 
   sectionHeader: {
@@ -241,7 +511,69 @@ const styles = StyleSheet.create({
 
   seeAll: {
     color: "#4F46E5",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+
+  courseCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  courseRow: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+
+  lastRow: {
+    borderBottomWidth: 0,
+  },
+
+  courseHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  courseInfo: {
+    flex: 1,
+    paddingRight: 10,
+  },
+
+  courseName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  courseCode: {
+    fontSize: 11,
+    color: "#94A3B8",
+    marginTop: 3,
+  },
+
+  coursePercentage: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#4F46E5",
+  },
+
+  progressBackground: {
+    height: 7,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 10,
+    marginTop: 10,
+    overflow: "hidden",
+  },
+
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#4F46E5",
+    borderRadius: 10,
   },
 
   assignmentCard: {
@@ -250,21 +582,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
-  iconBox: {
+  assignmentIcon: {
     width: 48,
     height: 48,
     borderRadius: 14,
     backgroundColor: "#EEF2FF",
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  icon: {
-    fontSize: 22,
   },
 
   cardInfo: {
@@ -288,15 +617,115 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#EF4444",
     marginTop: 6,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
-  classesTitle: {
-    marginTop: 20,
-    marginBottom: 14,
+  normalDeadline: {
+    color: "#4F46E5",
   },
 
   classCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  timeBox: {
+    width: 58,
+    alignItems: "center",
+  },
+
+  time: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#4F46E5",
+  },
+
+  am: {
+    fontSize: 11,
+    color: "#64748B",
+    marginTop: 2,
+  },
+
+  classLine: {
+    width: 1,
+    height: 55,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 16,
+  },
+
+  classInfo: {
+    flex: 1,
+  },
+
+  classTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  classType: {
+    fontSize: 12,
+    color: "#4F46E5",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+    gap: 4,
+  },
+
+  location: {
+    fontSize: 12,
+    color: "#64748B",
+  },
+
+  quickTitle: {
+    marginTop: 30,
+    marginBottom: 14,
+  },
+
+  quickActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+
+  quickAction: {
+    width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+  },
+
+  quickIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  quickLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#334155",
+  },
+
+  notificationCard: {
+    marginTop: 24,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
@@ -306,21 +735,30 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
 
-  timeBox: {
-    width: 60,
+  notificationIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
   },
 
-  time: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#4F46E5",
+  notificationInfo: {
+    flex: 1,
+    marginLeft: 13,
   },
 
-  am: {
-    fontSize: 11,
+  notificationTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  notificationText: {
+    fontSize: 12,
     color: "#64748B",
-    marginTop: 2,
+    marginTop: 4,
+    lineHeight: 17,
   },
 });

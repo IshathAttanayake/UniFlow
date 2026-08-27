@@ -110,7 +110,11 @@ export default function ProfileScreen() {
       <Text style={styles.sectionTitle}>Account</Text>
 
       <View style={styles.card}>
-        <TouchableOpacity style={styles.option} activeOpacity={0.7}>
+        <TouchableOpacity
+  style={styles.option}
+  activeOpacity={0.8}
+  onPress={() => router.push("/settings")}
+>
           <View style={styles.optionLeft}>
             <View style={styles.optionIcon}>
               <Ionicons

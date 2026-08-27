@@ -1,68 +1,91 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-const notifications = [
+const initialNotifications = [
   {
     id: 1,
-    title: "Assignment Due Tomorrow",
+    title: "Assignment due tomorrow",
     message:
-      "Your Database Assignment is due tomorrow. Make sure to submit it on time.",
-    time: "10 min ago",
-    icon: "document-text-outline",
+      "Your Database Assignment is due tomorrow. Don't forget to submit it.",
+    time: "10 minutes ago",
+    icon: "document-text-outline" as const,
     unread: true,
   },
   {
     id: 2,
-    title: "Class Reminder",
+    title: "New assignment added",
     message:
-      "Software Engineering starts at 09:00 AM in Lecture Hall A.",
-    time: "1 hour ago",
-    icon: "calendar-outline",
+      "A new Java OOP Project has been added to your assignments.",
+    time: "2 hours ago",
+    icon: "add-circle-outline" as const,
     unread: true,
   },
   {
     id: 3,
-    title: "Course Update",
+    title: "Class reminder",
     message:
-      "Your Software Engineering course progress has been updated.",
+      "Software Engineering starts at 09:00 AM in Lecture Hall A.",
     time: "Yesterday",
-    icon: "book-outline",
+    icon: "calendar-outline" as const,
     unread: false,
   },
   {
     id: 4,
-    title: "New Academic Announcement",
+    title: "Course update",
     message:
-      "A new announcement has been added by your university.",
+      "Your Database Management Systems course information has been updated.",
     time: "Yesterday",
-    icon: "megaphone-outline",
+    icon: "book-outline" as const,
     unread: false,
   },
 ];
 
 export default function NotificationsScreen() {
+  const [notifications, setNotifications] =
+    useState(initialNotifications);
+
+  const unreadCount = notifications.filter(
+    (notification) => notification.unread
+  ).length;
+
+  const markAllAsRead = () => {
+    setNotifications((current) =>
+      current.map((notification) => ({
+        ...notification,
+        unread: false,
+      }))
+    );
+  };
+
+  const markAsRead = (id: number) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id
+          ? { ...notification, unread: false }
+          : notification
+      )
+    );
+  };
+
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Notifications</Text>
-            <Text style={styles.subtitle}>
-              Stay updated with your studies
-            </Text>
-          </View>
-
           <TouchableOpacity
             style={styles.backButton}
             activeOpacity={0.8}
@@ -74,31 +97,39 @@ export default function NotificationsScreen() {
               color="#111827"
             />
           </TouchableOpacity>
-        </View>
 
-        {/* Unread Summary */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryIcon}>
-            <Ionicons
-              name="notifications"
-              size={23}
-              color="#4F46E5"
-            />
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Notifications</Text>
+
+            {unreadCount > 0 && (
+              <View style={styles.countBadge}>
+                <Text style={styles.countText}>
+                  {unreadCount}
+                </Text>
+              </View>
+            )}
           </View>
 
-          <View style={styles.summaryInfo}>
-            <Text style={styles.summaryTitle}>
-              2 unread notifications
-            </Text>
-
-            <Text style={styles.summaryText}>
-              You have some important updates to check.
-            </Text>
-          </View>
+          <View style={styles.headerSpace} />
         </View>
 
-        {/* Section */}
-        <Text style={styles.sectionTitle}>Recent</Text>
+        {/* Intro */}
+        <View style={styles.intro}>
+          <Text style={styles.subtitle}>
+            Stay updated with your studies
+          </Text>
+
+          {unreadCount > 0 && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={markAllAsRead}
+            >
+              <Text style={styles.markAll}>
+                Mark all as read
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Notifications */}
         <View style={styles.notificationList}>
@@ -110,6 +141,7 @@ export default function NotificationsScreen() {
                 notification.unread && styles.unreadCard,
               ]}
               activeOpacity={0.8}
+              onPress={() => markAsRead(notification.id)}
             >
               <View
                 style={[
@@ -119,14 +151,14 @@ export default function NotificationsScreen() {
                 ]}
               >
                 <Ionicons
-                  name={notification.icon as any}
-                  size={22}
+                  name={notification.icon}
+                  size={23}
                   color="#4F46E5"
                 />
               </View>
 
               <View style={styles.notificationInfo}>
-                <View style={styles.titleRow}>
+                <View style={styles.notificationTitleRow}>
                   <Text style={styles.notificationTitle}>
                     {notification.title}
                   </Text>
@@ -148,18 +180,26 @@ export default function NotificationsScreen() {
           ))}
         </View>
 
-        {/* Empty state hint */}
-        <View style={styles.footerCard}>
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={24}
-            color="#4F46E5"
-          />
+        {/* Empty State */}
+        {notifications.length === 0 && (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons
+                name="notifications-off-outline"
+                size={40}
+                color="#94A3B8"
+              />
+            </View>
 
-          <Text style={styles.footerText}>
-            You're all caught up for now.
-          </Text>
-        </View>
+            <Text style={styles.emptyTitle}>
+              No notifications
+            </Text>
+
+            <Text style={styles.emptyText}>
+              You're all caught up!
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -173,26 +213,14 @@ const styles = StyleSheet.create({
 
   content: {
     padding: 24,
-    paddingTop: 60,
-    paddingBottom: 100,
+    paddingTop: 55,
+    paddingBottom: 50,
   },
 
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  subtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 5,
+    justifyContent: "space-between",
   },
 
   backButton: {
@@ -206,47 +234,55 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
 
-  summaryCard: {
-    marginTop: 24,
-    backgroundColor: "#EEF2FF",
-    borderRadius: 18,
-    padding: 18,
+  headerTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
 
-  summaryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  countBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#4F46E5",
     justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 7,
+  },
+
+  countText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  headerSpace: {
+    width: 44,
+  },
+
+  intro: {
+    marginTop: 10,
+    marginBottom: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
 
-  summaryInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-
-  summaryTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  summaryText: {
-    fontSize: 12,
+  subtitle: {
+    fontSize: 14,
     color: "#64748B",
-    marginTop: 4,
   },
 
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#111827",
-    marginTop: 30,
-    marginBottom: 14,
+  markAll: {
+    fontSize: 13,
+    color: "#4F46E5",
+    fontWeight: "700",
   },
 
   notificationList: {
@@ -255,7 +291,7 @@ const styles = StyleSheet.create({
 
   notificationCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 17,
+    borderRadius: 18,
     padding: 16,
     flexDirection: "row",
     borderWidth: 1,
@@ -268,12 +304,13 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 15,
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 14,
   },
 
   unreadIconContainer: {
@@ -282,18 +319,18 @@ const styles = StyleSheet.create({
 
   notificationInfo: {
     flex: 1,
-    marginLeft: 13,
   },
 
-  titleRow: {
+  notificationTitleRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
 
   notificationTitle: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#111827",
   },
 
@@ -306,8 +343,8 @@ const styles = StyleSheet.create({
   },
 
   message: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     color: "#64748B",
     marginTop: 5,
   },
@@ -315,25 +352,34 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 11,
     color: "#94A3B8",
-    marginTop: 7,
+    marginTop: 8,
   },
 
-  footerCard: {
-    marginTop: 24,
-    padding: 18,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    flexDirection: "row",
+  emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 9,
+    paddingTop: 100,
   },
 
-  footerText: {
-    fontSize: 13,
-    fontWeight: "600",
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#E2E8F0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#111827",
+    marginTop: 18,
+  },
+
+  emptyText: {
+    fontSize: 14,
     color: "#64748B",
+    marginTop: 6,
   },
 });

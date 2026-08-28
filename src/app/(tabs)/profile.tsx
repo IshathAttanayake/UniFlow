@@ -135,28 +135,28 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.option}
-          activeOpacity={0.7}
-          onPress={handleLogout}
-        >
-          <View style={styles.optionLeft}>
-            <View style={[styles.optionIcon, styles.logoutIcon]}>
-              <Ionicons
-                name="log-out-outline"
-                size={21}
-                color="#EF4444"
-              />
-            </View>
+  style={styles.option}
+  activeOpacity={0.8}
+  onPress={() => router.replace("/login")}
+>
+  <View style={styles.optionLeft}>
+    <Ionicons
+      name="log-out-outline"
+      size={22}
+      color="#EF4444"
+    />
 
-            <Text style={styles.logoutText}>Logout</Text>
-          </View>
+    <Text style={[styles.optionText, { color: "#EF4444" }]}>
+      Logout
+    </Text>
+  </View>
 
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
+  <Ionicons
+    name="chevron-forward"
+    size={20}
+    color="#94A3B8"
+  />
+</TouchableOpacity>
       </View>
 
       <Text style={styles.version}>UniFlow • Version 1.0.0</Text>

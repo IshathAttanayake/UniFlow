@@ -4,7 +4,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
@@ -14,46 +13,33 @@ import { loginUser } from "../utils/auth";
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  const [errorTitle, setErrorTitle] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleLogin = async () => {
+    // Clear previous message
+    setErrorTitle("");
+    setErrorMessage("");
+
     // Check empty fields
-    if (!email.trim() || !password) {
-      Alert.alert(
-        "Missing Information",
-        "Please enter your email and password."
-      );
+    if (!email.trim() || !password.trim()) {
+      setErrorTitle("Missing Information");
+      setErrorMessage("Please enter your email and password.");
       return;
     }
 
-    try {
-      setLoading(true);
+    // Check login details
+    const success = await loginUser(email.trim(), password);
 
-      const success = await loginUser(
-        email.trim(),
-        password
-      );
-
-      if (success) {
-        // Login successful
-        router.replace("/dashboard");
-      } else {
-        // Login failed
-        Alert.alert(
-          "Login Failed",
-          "Invalid email or password."
-        );
-      }
-    } catch (error) {
-      console.log("Login error:", error);
-
-      Alert.alert(
-        "Error",
-        "Something went wrong. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    if (!success) {
+      setErrorTitle("Invalid Login");
+      setErrorMessage("Incorrect email or password. Please try again.");
+      return;
     }
+
+    // Login successful
+    router.replace("/dashboard");
   };
 
   return (
@@ -65,54 +51,56 @@ export default function LoginScreen() {
       <Text style={styles.title}>Welcome back</Text>
 
       <Text style={styles.subtitle}>
-        Login to continue to your student dashboard
+        Login to continue managing your student life
       </Text>
 
-      {/* Email */}
+      {/* Error Message */}
+      {errorTitle !== "" && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorTitle}>{errorTitle}</Text>
+          <Text style={styles.errorMessage}>{errorMessage}</Text>
+        </View>
+      )}
+
       <TextInput
         style={styles.input}
         placeholder="Email"
         placeholderTextColor="#999"
         keyboardType="email-address"
         autoCapitalize="none"
-        autoCorrect={false}
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => {
+          setEmail(text);
+          setErrorTitle("");
+          setErrorMessage("");
+        }}
       />
 
-      {/* Password */}
       <TextInput
         style={styles.input}
         placeholder="Password"
         placeholderTextColor="#999"
         secureTextEntry
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setPassword(text);
+          setErrorTitle("");
+          setErrorMessage("");
+        }}
       />
 
-      {/* Login Button */}
       <TouchableOpacity
-        style={[
-          styles.button,
-          loading && styles.buttonDisabled,
-        ]}
+        style={styles.button}
         onPress={handleLogin}
-        disabled={loading}
+        activeOpacity={0.8}
       >
-        <Text style={styles.buttonText}>
-          {loading ? "Logging in..." : "Login"}
-        </Text>
+        <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 
-      {/* Signup */}
-      <TouchableOpacity
-        onPress={() => router.push("/signup")}
-      >
+      <TouchableOpacity onPress={() => router.push("/signup")}>
         <Text style={styles.signup}>
           Don't have an account?{" "}
-          <Text style={styles.signupAccent}>
-            Sign up
-          </Text>
+          <Text style={styles.signupAccent}>Sign up</Text>
         </Text>
       </TouchableOpacity>
     </View>
@@ -147,7 +135,28 @@ const styles = StyleSheet.create({
     color: "#777",
     textAlign: "center",
     marginTop: 8,
-    marginBottom: 32,
+    marginBottom: 24,
+  },
+
+  errorBox: {
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+
+  errorTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+
+  errorMessage: {
+    fontSize: 13,
+    color: "#B91C1C",
+    marginTop: 4,
   },
 
   input: {
@@ -168,10 +177,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#4F46E5",
     marginTop: 8,
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
   },
 
   buttonText: {

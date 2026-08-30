@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useEffect, useState } from "react";
 import { getUser, logoutUser, User } from "../../utils/auth";
 
 export default function ProfileScreen() {
@@ -24,10 +24,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-  Alert.alert(
-    "Logout",
-    "Are you sure you want to logout?",
-    [
+    Alert.alert("Logout", "Are you sure you want to logout?", [
       {
         text: "Cancel",
         style: "cancel",
@@ -37,12 +34,12 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           await logoutUser();
+          router.dismissAll();
           router.replace("/login");
         },
       },
-    ]
-  );
-};
+    ]);
+  };
 
   const userName = user?.name || "Student";
   const userEmail = user?.email || "No email available";

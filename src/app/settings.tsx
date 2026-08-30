@@ -1,20 +1,56 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { logoutUser } from "../utils/auth";
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
-  const [assignmentReminders, setAssignmentReminders] = useState(true);
-  const [classReminders, setClassReminders] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            await logoutUser();
+            router.replace("/login");
+          },
+        },
+      ]
+    );
+  };
+
+  const handleChangePassword = () => {
+    Alert.alert(
+      "Change Password",
+      "Password changing will be available in the next update."
+    );
+  };
+
+  const handleAbout = () => {
+    Alert.alert(
+      "About UniFlow",
+      "UniFlow\n\nA student management app designed to help you manage your courses, assignments, schedule and academic life.\n\nVersion 1.0.0"
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -28,133 +64,107 @@ export default function SettingsScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            activeOpacity={0.8}
             onPress={() => router.back()}
+            activeOpacity={0.7}
           >
             <Ionicons
               name="arrow-back"
-              size={22}
+              size={23}
               color="#111827"
             />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Settings</Text>
 
-          <View style={styles.headerSpace} />
+          <View style={styles.headerSpacer} />
         </View>
 
-        {/* Notifications */}
-        <Text style={styles.sectionTitle}>
-          Notifications
-        </Text>
+        {/* Preferences */}
+        <Text style={styles.sectionTitle}>Preferences</Text>
 
         <View style={styles.card}>
-          <SettingRow
-            icon="notifications-outline"
-            title="Notifications"
-            subtitle="Receive notifications from UniFlow"
-            value={notifications}
-            onValueChange={setNotifications}
-          />
-
-          <SettingRow
-            icon="alarm-outline"
-            title="Assignment Reminders"
-            subtitle="Get reminded about upcoming deadlines"
-            value={assignmentReminders}
-            onValueChange={setAssignmentReminders}
-          />
-
-          <SettingRow
-            icon="calendar-outline"
-            title="Class Reminders"
-            subtitle="Get reminded about upcoming classes"
-            value={classReminders}
-            onValueChange={setClassReminders}
-          />
-        </View>
-
-        {/* Appearance */}
-        <Text style={styles.sectionTitle}>
-          Appearance
-        </Text>
-
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.option}
-            activeOpacity={0.8}
-          >
-            <View style={styles.optionLeft}>
-              <View style={styles.iconContainer}>
+          {/* Notifications */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={styles.iconBox}>
                 <Ionicons
-                  name="phone-portrait-outline"
+                  name="notifications-outline"
                   size={21}
                   color="#4F46E5"
                 />
               </View>
 
-              <View style={styles.optionInfo}>
-                <Text style={styles.optionTitle}>
-                  App Theme
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>
+                  Notifications
                 </Text>
 
-                <Text style={styles.optionSubtitle}>
-                  Light
+                <Text style={styles.settingDescription}>
+                  Receive assignment and class reminders
                 </Text>
               </View>
             </View>
 
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#94A3B8"
+            <Switch
+              value={notifications}
+              onValueChange={setNotifications}
+              trackColor={{
+                false: "#CBD5E1",
+                true: "#A5B4FC",
+              }}
+              thumbColor={
+                notifications ? "#4F46E5" : "#F8FAFC"
+              }
             />
-          </TouchableOpacity>
+          </View>
+
+          {/* Dark Mode */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="moon-outline"
+                  size={21}
+                  color="#4F46E5"
+                />
+              </View>
+
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>
+                  Dark Mode
+                </Text>
+
+                <Text style={styles.settingDescription}>
+                  Use a darker appearance
+                </Text>
+              </View>
+            </View>
+
+            <Switch
+              value={darkMode}
+              onValueChange={setDarkMode}
+              trackColor={{
+                false: "#CBD5E1",
+                true: "#A5B4FC",
+              }}
+              thumbColor={
+                darkMode ? "#4F46E5" : "#F8FAFC"
+              }
+            />
+          </View>
         </View>
 
         {/* Account */}
-        <Text style={styles.sectionTitle}>
-          Account
-        </Text>
+        <Text style={styles.sectionTitle}>Account</Text>
 
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.option}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
+            onPress={handleChangePassword}
           >
-            <View style={styles.optionLeft}>
-              <View style={styles.iconContainer}>
-                <Ionicons
-                  name="create-outline"
-                  size={21}
-                  color="#4F46E5"
-                />
-              </View>
-
-              <View style={styles.optionInfo}>
-                <Text style={styles.optionTitle}>
-                  Edit Profile
-                </Text>
-
-                <Text style={styles.optionSubtitle}>
-                  Update your student information
-                </Text>
-              </View>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#94A3B8"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.option}
-            activeOpacity={0.8}
-          >
-            <View style={styles.optionLeft}>
-              <View style={styles.iconContainer}>
+            <View style={styles.settingLeft}>
+              <View style={styles.iconBox}>
                 <Ionicons
                   name="lock-closed-outline"
                   size={21}
@@ -162,12 +172,12 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              <View style={styles.optionInfo}>
-                <Text style={styles.optionTitle}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>
                   Change Password
                 </Text>
 
-                <Text style={styles.optionSubtitle}>
+                <Text style={styles.settingDescription}>
                   Update your account password
                 </Text>
               </View>
@@ -179,81 +189,88 @@ export default function SettingsScreen() {
               color="#94A3B8"
             />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.option}
+            activeOpacity={0.7}
+            onPress={handleAbout}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={21}
+                  color="#4F46E5"
+                />
+              </View>
+
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>
+                  About UniFlow
+                </Text>
+
+                <Text style={styles.settingDescription}>
+                  App information and version
+                </Text>
+              </View>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* About */}
-        <Text style={styles.sectionTitle}>
-          About
-        </Text>
+        {/* Logout */}
+        <Text style={styles.sectionTitle}>Session</Text>
 
         <View style={styles.card}>
-          <View style={styles.aboutRow}>
-            <View style={styles.logo}>
-              <Text style={styles.logoText}>U</Text>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            activeOpacity={0.7}
+            onPress={handleLogout}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.logoutIcon}>
+                <Ionicons
+                  name="log-out-outline"
+                  size={21}
+                  color="#EF4444"
+                />
+              </View>
+
+              <View style={styles.settingInfo}>
+                <Text style={styles.logoutTitle}>
+                  Logout
+                </Text>
+
+                <Text style={styles.settingDescription}>
+                  Sign out of your UniFlow account
+                </Text>
+              </View>
             </View>
 
-            <View>
-              <Text style={styles.appName}>
-                UniFlow
-              </Text>
-
-              <Text style={styles.version}>
-                Version 1.0.0
-              </Text>
-            </View>
-          </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>
-          UniFlow • Your student life, all in one place.
-        </Text>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerTitle}>UniFlow</Text>
+          <Text style={styles.footerText}>
+            Student Management System
+          </Text>
+          <Text style={styles.version}>
+            Version 1.0.0
+          </Text>
+        </View>
       </ScrollView>
-    </View>
-  );
-}
-
-function SettingRow({
-  icon,
-  title,
-  subtitle,
-  value,
-  onValueChange,
-}: {
-  icon: any;
-  title: string;
-  subtitle: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-}) {
-  return (
-    <View style={styles.settingRow}>
-      <View style={styles.iconContainer}>
-        <Ionicons
-          name={icon}
-          size={21}
-          color="#4F46E5"
-        />
-      </View>
-
-      <View style={styles.settingInfo}>
-        <Text style={styles.optionTitle}>
-          {title}
-        </Text>
-
-        <Text style={styles.optionSubtitle}>
-          {subtitle}
-        </Text>
-      </View>
-
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{
-          false: "#CBD5E1",
-          true: "#A5B4FC",
-        }}
-        thumbColor={value ? "#4F46E5" : "#F8FAFC"}
-      />
     </View>
   );
 }
@@ -265,9 +282,9 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 24,
-    paddingTop: 55,
-    paddingBottom: 50,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 100,
   },
 
   header: {
@@ -278,137 +295,140 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#E5E7EB",
   },
 
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: "#111827",
   },
 
-  headerSpace: {
-    width: 44,
+  headerSpacer: {
+    width: 42,
   },
 
   sectionTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "800",
     color: "#111827",
     marginBottom: 12,
-    marginTop: 5,
+    marginTop: 8,
   },
 
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    paddingHorizontal: 16,
     marginBottom: 26,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   settingRow: {
+    minHeight: 78,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
+  },
+
+  option: {
+    minHeight: 78,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+
+  logoutButton: {
+    minHeight: 78,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+  },
+
+  settingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 13,
+  },
+
+  logoutIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#FEF2F2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 13,
   },
 
   settingInfo: {
     flex: 1,
-    marginLeft: 13,
-    marginRight: 10,
   },
 
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-
-  optionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-
-  optionInfo: {
-    marginLeft: 13,
-    flex: 1,
-  },
-
-  optionTitle: {
+  settingTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#1E293B",
   },
 
-  optionSubtitle: {
+  settingDescription: {
     fontSize: 12,
-    color: "#64748B",
+    color: "#94A3B8",
     marginTop: 4,
-    lineHeight: 17,
   },
 
-  aboutRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 18,
-  },
-
-  logo: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    backgroundColor: "#4F46E5",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
-
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 23,
-    fontWeight: "800",
-  },
-
-  appName: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  version: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 3,
+  logoutTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#EF4444",
   },
 
   footer: {
-    textAlign: "center",
-    color: "#94A3B8",
+    alignItems: "center",
+    marginTop: 8,
+    paddingBottom: 20,
+  },
+
+  footerTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#4F46E5",
+  },
+
+  footerText: {
     fontSize: 12,
+    color: "#94A3B8",
     marginTop: 4,
+  },
+
+  version: {
+    fontSize: 11,
+    color: "#CBD5E1",
+    marginTop: 6,
   },
 });

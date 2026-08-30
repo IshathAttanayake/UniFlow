@@ -1,202 +1,236 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { getUser, logoutUser, User } from "../../utils/auth";
+
+import { logoutUser } from "../../utils/auth";
 
 export default function ProfileScreen() {
-  const [user, setUser] = useState<User | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
+  const handleLogout = async () => {
+    setShowLogoutModal(false);
 
-  const loadUser = async () => {
-    const savedUser = await getUser();
-    setUser(savedUser);
+    await logoutUser();
+
+    router.replace("/login");
   };
-
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await logoutUser();
-          router.dismissAll();
-          router.replace("/login");
-        },
-      },
-    ]);
-  };
-
-  const userName = user?.name || "Student";
-  const userEmail = user?.email || "No email available";
-  const avatarLetter = userName.charAt(0).toUpperCase();
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.content}
-    >
-      {/* Profile Header */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{avatarLetter}</Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        {/* Profile Header */}
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>I</Text>
+          </View>
+
+          <Text style={styles.name}>Ishath</Text>
+
+          <Text style={styles.degree}>
+            Computer Science Undergraduate
+          </Text>
+
+          <View style={styles.studentBadge}>
+            <Ionicons
+              name="school-outline"
+              size={15}
+              color="#4F46E5"
+            />
+            <Text style={styles.studentBadgeText}>SLIIT</Text>
+          </View>
         </View>
 
-        <Text style={styles.name}>{userName}</Text>
-
-        <Text style={styles.degree}>
-          Computer Science Undergraduate
+        {/* Student Information */}
+        <Text style={styles.sectionTitle}>
+          Student Information
         </Text>
 
-        <View style={styles.studentBadge}>
-          <Ionicons
-            name="school-outline"
-            size={15}
-            color="#4F46E5"
+        <View style={styles.card}>
+          <InfoRow
+            icon="id-card-outline"
+            label="Student ID"
+            value="ITXXXXXXXX"
           />
 
-          <Text style={styles.studentBadgeText}>SLIIT</Text>
+          <InfoRow
+            icon="school-outline"
+            label="University"
+            value="SLIIT"
+          />
+
+          <InfoRow
+            icon="book-outline"
+            label="Degree"
+            value="BSc (Hons) Computer Science"
+          />
+
+          <InfoRow
+            icon="mail-outline"
+            label="Email"
+            value="your@email.com"
+            last
+          />
         </View>
-      </View>
 
-      {/* Student Information */}
-      <Text style={styles.sectionTitle}>
-        Student Information
-      </Text>
+        {/* Academic Information */}
+        <Text style={styles.sectionTitle}>
+          Academic
+        </Text>
 
-      <View style={styles.card}>
-        <InfoRow
-          icon="id-card-outline"
-          label="Student ID"
-          value="ITXXXXXXXX"
-        />
+        <View style={styles.card}>
+          <InfoRow
+            icon="layers-outline"
+            label="Current Year"
+            value="Year 2"
+          />
 
-        <InfoRow
-          icon="school-outline"
-          label="University"
-          value="SLIIT"
-        />
+          <InfoRow
+            icon="calendar-outline"
+            label="Current Semester"
+            value="Semester 2"
+          />
 
-        <InfoRow
-          icon="book-outline"
-          label="Degree"
-          value="BSc (Hons) Computer Science"
-        />
+          <InfoRow
+            icon="checkmark-circle-outline"
+            label="Academic Status"
+            value="Active Student"
+            last
+          />
+        </View>
 
-        <InfoRow
-          icon="mail-outline"
-          label="Email"
-          value={userEmail}
-          last
-        />
-      </View>
+        {/* Account */}
+        <Text style={styles.sectionTitle}>
+          Account
+        </Text>
 
-      {/* Academic Information */}
-      <Text style={styles.sectionTitle}>
-        Academic
-      </Text>
+        <View style={styles.card}>
+          {/* Settings */}
+          <TouchableOpacity
+            style={styles.option}
+            activeOpacity={0.8}
+            onPress={() => router.push("/settings")}
+          >
+            <View style={styles.optionLeft}>
+              <View style={styles.optionIcon}>
+                <Ionicons
+                  name="settings-outline"
+                  size={21}
+                  color="#4F46E5"
+                />
+              </View>
 
-      <View style={styles.card}>
-        <InfoRow
-          icon="layers-outline"
-          label="Current Year"
-          value="Year 2"
-        />
+              <Text style={styles.optionText}>
+                Settings
+              </Text>
+            </View>
 
-        <InfoRow
-          icon="calendar-outline"
-          label="Current Semester"
-          value="Semester 2"
-        />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
 
-        <InfoRow
-          icon="checkmark-circle-outline"
-          label="Academic Status"
-          value="Active Student"
-          last
-        />
-      </View>
+          {/* Logout */}
+          <TouchableOpacity
+            style={[styles.option, styles.lastOption]}
+            activeOpacity={0.8}
+            onPress={() => {
+              console.log("LOGOUT BUTTON PRESSED");
+              setShowLogoutModal(true);
+            }}
+          >
+            <View style={styles.optionLeft}>
+              <View style={styles.logoutIcon}>
+                <Ionicons
+                  name="log-out-outline"
+                  size={21}
+                  color="#EF4444"
+                />
+              </View>
 
-      {/* Account */}
-      <Text style={styles.sectionTitle}>
-        Account
-      </Text>
+              <Text style={styles.logoutText}>
+                Logout
+              </Text>
+            </View>
 
-      <View style={styles.card}>
-        {/* Settings */}
-        <TouchableOpacity
-          style={styles.option}
-          activeOpacity={0.8}
-          onPress={() => router.push("/settings")}
-        >
-          <View style={styles.optionLeft}>
-            <View style={styles.optionIcon}>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.version}>
+          UniFlow • Version 1.0.0
+        </Text>
+      </ScrollView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {/* Icon */}
+            <View style={styles.modalIcon}>
               <Ionicons
-                name="settings-outline"
-                size={21}
-                color="#4F46E5"
+                name="log-out-outline"
+                size={28}
+                color="#EF4444"
               />
             </View>
 
-            <Text style={styles.optionText}>
-              Settings
+            <Text style={styles.modalTitle}>
+              Logout
             </Text>
+
+            <Text style={styles.modalMessage}>
+              Are you sure you want to logout from UniFlow?
+            </Text>
+
+            {/* Buttons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                activeOpacity={0.8}
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text style={styles.cancelText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.confirmButton}
+                activeOpacity={0.8}
+                onPress={handleLogout}
+              >
+                <Text style={styles.confirmText}>
+                  Logout
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
-
-        {/* Logout */}
-        <TouchableOpacity
-  style={styles.option}
-  activeOpacity={0.8}
-  onPress={handleLogout}
->
-  <View style={styles.optionLeft}>
-    <View style={[styles.optionIcon, styles.logoutIcon]}>
-      <Ionicons
-        name="log-out-outline"
-        size={21}
-        color="#EF4444"
-      />
-    </View>
-
-    <Text style={styles.logoutText}>
-      Logout
-    </Text>
-  </View>
-
-  <Ionicons
-    name="chevron-forward"
-    size={20}
-    color="#94A3B8"
-  />
-</TouchableOpacity>
-      </View>
-
-      <Text style={styles.version}>
-        UniFlow • Version 1.0.0
-      </Text>
-    </ScrollView>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -366,6 +400,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
 
+  lastOption: {
+    borderBottomWidth: 0,
+  },
+
   optionLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -382,7 +420,12 @@ const styles = StyleSheet.create({
   },
 
   logoutIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     backgroundColor: "#FEF2F2",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   optionText: {
@@ -402,5 +445,85 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#94A3B8",
     marginTop: 4,
+  },
+
+  /* Modal */
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+
+  modalCard: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 24,
+    alignItems: "center",
+  },
+
+  modalIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FEF2F2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  modalMessage: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 21,
+    marginTop: 8,
+    marginBottom: 22,
+  },
+
+  modalButtons: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  cancelButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  cancelText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#475569",
+  },
+
+  confirmButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  confirmText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

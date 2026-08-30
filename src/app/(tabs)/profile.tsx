@@ -8,25 +8,45 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useEffect, useState } from "react";
+import { getUser, logoutUser, User } from "../../utils/auth";
 
 export default function ProfileScreen() {
-  const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: () => router.replace("/login"),
-        },
-      ]
-    );
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    const savedUser = await getUser();
+    setUser(savedUser);
   };
+
+  const handleLogout = () => {
+  Alert.alert(
+    "Logout",
+    "Are you sure you want to logout?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await logoutUser();
+          router.replace("/login");
+        },
+      },
+    ]
+  );
+};
+
+  const userName = user?.name || "Student";
+  const userEmail = user?.email || "No email available";
+  const avatarLetter = userName.charAt(0).toUpperCase();
 
   return (
     <ScrollView
@@ -37,23 +57,30 @@ export default function ProfileScreen() {
       {/* Profile Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>I</Text>
+          <Text style={styles.avatarText}>{avatarLetter}</Text>
         </View>
 
-        <Text style={styles.name}>Ishath</Text>
+        <Text style={styles.name}>{userName}</Text>
 
         <Text style={styles.degree}>
           Computer Science Undergraduate
         </Text>
 
         <View style={styles.studentBadge}>
-          <Ionicons name="school-outline" size={15} color="#4F46E5" />
+          <Ionicons
+            name="school-outline"
+            size={15}
+            color="#4F46E5"
+          />
+
           <Text style={styles.studentBadgeText}>SLIIT</Text>
         </View>
       </View>
 
       {/* Student Information */}
-      <Text style={styles.sectionTitle}>Student Information</Text>
+      <Text style={styles.sectionTitle}>
+        Student Information
+      </Text>
 
       <View style={styles.card}>
         <InfoRow
@@ -77,13 +104,15 @@ export default function ProfileScreen() {
         <InfoRow
           icon="mail-outline"
           label="Email"
-          value="your@email.com"
+          value={userEmail}
           last
         />
       </View>
 
       {/* Academic Information */}
-      <Text style={styles.sectionTitle}>Academic</Text>
+      <Text style={styles.sectionTitle}>
+        Academic
+      </Text>
 
       <View style={styles.card}>
         <InfoRow
@@ -107,14 +136,17 @@ export default function ProfileScreen() {
       </View>
 
       {/* Account */}
-      <Text style={styles.sectionTitle}>Account</Text>
+      <Text style={styles.sectionTitle}>
+        Account
+      </Text>
 
       <View style={styles.card}>
+        {/* Settings */}
         <TouchableOpacity
-  style={styles.option}
-  activeOpacity={0.8}
-  onPress={() => router.push("/settings")}
->
+          style={styles.option}
+          activeOpacity={0.8}
+          onPress={() => router.push("/settings")}
+        >
           <View style={styles.optionLeft}>
             <View style={styles.optionIcon}>
               <Ionicons
@@ -124,7 +156,9 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <Text style={styles.optionText}>Settings</Text>
+            <Text style={styles.optionText}>
+              Settings
+            </Text>
           </View>
 
           <Ionicons
@@ -134,19 +168,22 @@ export default function ProfileScreen() {
           />
         </TouchableOpacity>
 
+        {/* Logout */}
         <TouchableOpacity
   style={styles.option}
   activeOpacity={0.8}
-  onPress={() => router.replace("/login")}
+  onPress={handleLogout}
 >
   <View style={styles.optionLeft}>
-    <Ionicons
-      name="log-out-outline"
-      size={22}
-      color="#EF4444"
-    />
+    <View style={[styles.optionIcon, styles.logoutIcon]}>
+      <Ionicons
+        name="log-out-outline"
+        size={21}
+        color="#EF4444"
+      />
+    </View>
 
-    <Text style={[styles.optionText, { color: "#EF4444" }]}>
+    <Text style={styles.logoutText}>
       Logout
     </Text>
   </View>
@@ -159,7 +196,9 @@ export default function ProfileScreen() {
 </TouchableOpacity>
       </View>
 
-      <Text style={styles.version}>UniFlow • Version 1.0.0</Text>
+      <Text style={styles.version}>
+        UniFlow • Version 1.0.0
+      </Text>
     </ScrollView>
   );
 }
@@ -176,14 +215,28 @@ function InfoRow({
   last?: boolean;
 }) {
   return (
-    <View style={[styles.infoRow, last && styles.lastRow]}>
+    <View
+      style={[
+        styles.infoRow,
+        last && styles.lastRow,
+      ]}
+    >
       <View style={styles.infoIcon}>
-        <Ionicons name={icon} size={21} color="#4F46E5" />
+        <Ionicons
+          name={icon}
+          size={21}
+          color="#4F46E5"
+        />
       </View>
 
       <View style={styles.infoContent}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.value}>{value}</Text>
+        <Text style={styles.label}>
+          {label}
+        </Text>
+
+        <Text style={styles.value}>
+          {value}
+        </Text>
       </View>
     </View>
   );

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -10,52 +9,51 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { logoutUser } from "../utils/auth";
+import { useState } from "react";
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            await logoutUser();
-            router.replace("/login");
-          },
-        },
-      ]
-    );
-  };
-
   const handleChangePassword = () => {
     Alert.alert(
       "Change Password",
-      "Password changing will be available in the next update."
+      "Password change functionality will be added soon."
     );
   };
 
   const handleAbout = () => {
     Alert.alert(
       "About UniFlow",
-      "UniFlow\n\nA student management app designed to help you manage your courses, assignments, schedule and academic life.\n\nVersion 1.0.0"
+      "UniFlow\n\nStudent life management app\nVersion 1.0.0"
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Coming Soon",
+              "Account deletion will be implemented later."
+            );
+          },
+        },
+      ]
     );
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -64,12 +62,12 @@ export default function SettingsScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
+            activeOpacity={0.8}
             onPress={() => router.back()}
-            activeOpacity={0.7}
           >
             <Ionicons
               name="arrow-back"
-              size={23}
+              size={22}
               color="#111827"
             />
           </TouchableOpacity>
@@ -100,7 +98,7 @@ export default function SettingsScreen() {
                 </Text>
 
                 <Text style={styles.settingDescription}>
-                  Receive assignment and class reminders
+                  Receive reminders about classes and assignments
                 </Text>
               </View>
             </View>
@@ -109,8 +107,8 @@ export default function SettingsScreen() {
               value={notifications}
               onValueChange={setNotifications}
               trackColor={{
-                false: "#CBD5E1",
-                true: "#A5B4FC",
+                false: "#D1D5DB",
+                true: "#C7D2FE",
               }}
               thumbColor={
                 notifications ? "#4F46E5" : "#F8FAFC"
@@ -119,7 +117,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Dark Mode */}
-          <View style={styles.settingRow}>
+          <View style={[styles.settingRow, styles.lastRow]}>
             <View style={styles.settingLeft}>
               <View style={styles.iconBox}>
                 <Ionicons
@@ -135,7 +133,7 @@ export default function SettingsScreen() {
                 </Text>
 
                 <Text style={styles.settingDescription}>
-                  Use a darker appearance
+                  Use a darker appearance for the app
                 </Text>
               </View>
             </View>
@@ -144,8 +142,8 @@ export default function SettingsScreen() {
               value={darkMode}
               onValueChange={setDarkMode}
               trackColor={{
-                false: "#CBD5E1",
-                true: "#A5B4FC",
+                false: "#D1D5DB",
+                true: "#C7D2FE",
               }}
               thumbColor={
                 darkMode ? "#4F46E5" : "#F8FAFC"
@@ -158,12 +156,46 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Account</Text>
 
         <View style={styles.card}>
+          {/* Edit Profile */}
           <TouchableOpacity
             style={styles.option}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
+            onPress={() => router.push("/edit-profile")}
+          >
+            <View style={styles.optionLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="person-outline"
+                  size={21}
+                  color="#4F46E5"
+                />
+              </View>
+
+              <View>
+                <Text style={styles.settingTitle}>
+                  Edit Profile
+                </Text>
+
+                <Text style={styles.settingDescription}>
+                  Update your personal information
+                </Text>
+              </View>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+
+          {/* Change Password */}
+          <TouchableOpacity
+            style={styles.option}
+            activeOpacity={0.8}
             onPress={handleChangePassword}
           >
-            <View style={styles.settingLeft}>
+            <View style={styles.optionLeft}>
               <View style={styles.iconBox}>
                 <Ionicons
                   name="lock-closed-outline"
@@ -172,7 +204,7 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              <View style={styles.settingInfo}>
+              <View>
                 <Text style={styles.settingTitle}>
                   Change Password
                 </Text>
@@ -190,12 +222,56 @@ export default function SettingsScreen() {
             />
           </TouchableOpacity>
 
+          {/* Privacy */}
+          <TouchableOpacity
+            style={[styles.option, styles.lastRow]}
+            activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                "Privacy",
+                "Privacy settings will be added soon."
+              )
+            }
+          >
+            <View style={styles.optionLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={21}
+                  color="#4F46E5"
+                />
+              </View>
+
+              <View>
+                <Text style={styles.settingTitle}>
+                  Privacy
+                </Text>
+
+                <Text style={styles.settingDescription}>
+                  Manage your privacy settings
+                </Text>
+              </View>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Support */}
+        <Text style={styles.sectionTitle}>Support</Text>
+
+        <View style={styles.card}>
+          {/* About */}
           <TouchableOpacity
             style={styles.option}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             onPress={handleAbout}
           >
-            <View style={styles.settingLeft}>
+            <View style={styles.optionLeft}>
               <View style={styles.iconBox}>
                 <Ionicons
                   name="information-circle-outline"
@@ -204,13 +280,51 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              <View style={styles.settingInfo}>
+              <View>
                 <Text style={styles.settingTitle}>
                   About UniFlow
                 </Text>
 
                 <Text style={styles.settingDescription}>
-                  App information and version
+                  Version 1.0.0
+                </Text>
+              </View>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+
+          {/* Help */}
+          <TouchableOpacity
+            style={[styles.option, styles.lastRow]}
+            activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                "Help & Support",
+                "Help and support features will be added soon."
+              )
+            }
+          >
+            <View style={styles.optionLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={21}
+                  color="#4F46E5"
+                />
+              </View>
+
+              <View>
+                <Text style={styles.settingTitle}>
+                  Help & Support
+                </Text>
+
+                <Text style={styles.settingDescription}>
+                  Get help with UniFlow
                 </Text>
               </View>
             </View>
@@ -223,31 +337,33 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Logout */}
-        <Text style={styles.sectionTitle}>Session</Text>
+        {/* Danger Zone */}
+        <Text style={styles.sectionTitle}>
+          Danger Zone
+        </Text>
 
         <View style={styles.card}>
           <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-            onPress={handleLogout}
+            style={[styles.option, styles.lastRow]}
+            activeOpacity={0.8}
+            onPress={handleDeleteAccount}
           >
-            <View style={styles.settingLeft}>
-              <View style={styles.logoutIcon}>
+            <View style={styles.optionLeft}>
+              <View style={styles.deleteIcon}>
                 <Ionicons
-                  name="log-out-outline"
+                  name="trash-outline"
                   size={21}
                   color="#EF4444"
                 />
               </View>
 
-              <View style={styles.settingInfo}>
-                <Text style={styles.logoutTitle}>
-                  Logout
+              <View>
+                <Text style={styles.deleteTitle}>
+                  Delete Account
                 </Text>
 
                 <Text style={styles.settingDescription}>
-                  Sign out of your UniFlow account
+                  Permanently remove your account
                 </Text>
               </View>
             </View>
@@ -260,16 +376,9 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerTitle}>UniFlow</Text>
-          <Text style={styles.footerText}>
-            Student Management System
-          </Text>
-          <Text style={styles.version}>
-            Version 1.0.0
-          </Text>
-        </View>
+        <Text style={styles.version}>
+          UniFlow • Version 1.0.0
+        </Text>
       </ScrollView>
     </View>
   );
@@ -282,22 +391,22 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
 
   header: {
+    height: 110,
+    paddingTop: 50,
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 30,
   },
 
   backButton: {
     width: 42,
     height: 42,
-    borderRadius: 13,
+    borderRadius: 12,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
@@ -306,7 +415,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
     color: "#111827",
   },
@@ -319,6 +428,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: "#111827",
+    marginHorizontal: 20,
     marginBottom: 12,
     marginTop: 8,
   },
@@ -326,44 +436,47 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    marginBottom: 26,
+    marginHorizontal: 20,
+    marginBottom: 24,
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
 
   settingRow: {
-    minHeight: 78,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
 
   option: {
-    minHeight: 78,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
 
-  logoutButton: {
-    minHeight: 78,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
+  lastRow: {
+    borderBottomWidth: 0,
   },
 
   settingLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: 12,
+  },
+
+  optionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
   },
 
   iconBox: {
@@ -376,7 +489,7 @@ const styles = StyleSheet.create({
     marginRight: 13,
   },
 
-  logoutIcon: {
+  deleteIcon: {
     width: 42,
     height: 42,
     borderRadius: 12,
@@ -393,42 +506,26 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#111827",
   },
 
   settingDescription: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: "#64748B",
     marginTop: 4,
+    lineHeight: 17,
   },
 
-  logoutTitle: {
+  deleteTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#EF4444",
   },
 
-  footer: {
-    alignItems: "center",
-    marginTop: 8,
-    paddingBottom: 20,
-  },
-
-  footerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#4F46E5",
-  },
-
-  footerText: {
+  version: {
+    textAlign: "center",
     fontSize: 12,
     color: "#94A3B8",
     marginTop: 4,
-  },
-
-  version: {
-    fontSize: 11,
-    color: "#CBD5E1",
-    marginTop: 6,
   },
 });

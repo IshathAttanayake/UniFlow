@@ -20,7 +20,32 @@ export async function getUser(): Promise<User | null> {
     return null;
   }
 
-  return JSON.parse(data);
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+export async function updateUser(
+  name: string,
+  email: string
+): Promise<boolean> {
+  const user = await getUser();
+
+  if (!user) {
+    return false;
+  }
+
+  const updatedUser: User = {
+    name: name.trim(),
+    email: email.trim(),
+    password: user.password,
+  };
+
+  await saveUser(updatedUser);
+
+  return true;
 }
 
 export async function loginUser(
@@ -46,6 +71,7 @@ export async function loginUser(
 
 export async function logoutUser() {
   await AsyncStorage.removeItem(SESSION_KEY);
+  await AsyncStorage.removeItem(USER_KEY);
 }
 
 export async function isLoggedIn(): Promise<boolean> {

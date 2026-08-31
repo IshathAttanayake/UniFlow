@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
@@ -10,10 +11,28 @@ import {
   View,
 } from "react-native";
 
-import { logoutUser } from "../../utils/auth";
+import { getUser, logoutUser, User } from "../../utils/auth";
 
 export default function ProfileScreen() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Load saved user account
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const savedUser = await getUser();
+      setUser(savedUser);
+    } catch (error) {
+      console.log("Error loading user:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
@@ -22,6 +41,10 @@ export default function ProfileScreen() {
 
     router.replace("/login");
   };
+
+  // Get first letter for avatar
+  const avatarLetter =
+    user?.name?.trim().charAt(0).toUpperCase() || "U";
 
   return (
     <>
@@ -33,23 +56,38 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>I</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.avatarText}>{avatarLetter}</Text>
+            )}
           </View>
 
-          <Text style={styles.name}>Ishath</Text>
+          {loading ? (
+            <ActivityIndicator color="#4F46E5" />
+          ) : (
+            <>
+              <Text style={styles.name}>
+                {user?.name || "Student"}
+              </Text>
 
-          <Text style={styles.degree}>
-            Computer Science Undergraduate
-          </Text>
+              <Text style={styles.degree}>
+                Computer Science Undergraduate
+              </Text>
 
-          <View style={styles.studentBadge}>
-            <Ionicons
-              name="school-outline"
-              size={15}
-              color="#4F46E5"
-            />
-            <Text style={styles.studentBadgeText}>SLIIT</Text>
-          </View>
+              <View style={styles.studentBadge}>
+                <Ionicons
+                  name="school-outline"
+                  size={15}
+                  color="#4F46E5"
+                />
+
+                <Text style={styles.studentBadgeText}>
+                  SLIIT
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Student Information */}
@@ -79,7 +117,7 @@ export default function ProfileScreen() {
           <InfoRow
             icon="mail-outline"
             label="Email"
-            value="your@email.com"
+            value={user?.email || "No email available"}
             last
           />
         </View>
@@ -147,10 +185,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[styles.option, styles.lastOption]}
             activeOpacity={0.8}
-            onPress={() => {
-              console.log("LOGOUT BUTTON PRESSED");
-              setShowLogoutModal(true);
-            }}
+            onPress={() => setShowLogoutModal(true)}
           >
             <View style={styles.optionLeft}>
               <View style={styles.logoutIcon}>
@@ -188,7 +223,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            {/* Icon */}
+            {/* Logout Icon */}
             <View style={styles.modalIcon}>
               <Ionicons
                 name="log-out-outline"
@@ -205,8 +240,9 @@ export default function ProfileScreen() {
               Are you sure you want to logout from UniFlow?
             </Text>
 
-            {/* Buttons */}
+            {/* Modal Buttons */}
             <View style={styles.modalButtons}>
+              {/* Cancel */}
               <TouchableOpacity
                 style={styles.cancelButton}
                 activeOpacity={0.8}
@@ -217,6 +253,7 @@ export default function ProfileScreen() {
                 </Text>
               </TouchableOpacity>
 
+              {/* Confirm Logout */}
               <TouchableOpacity
                 style={styles.confirmButton}
                 activeOpacity={0.8}
@@ -309,6 +346,7 @@ const styles = StyleSheet.create({
     fontSize: 27,
     fontWeight: "800",
     color: "#111827",
+    textAlign: "center",
   },
 
   degree: {
@@ -447,7 +485,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  /* Modal */
+  /* Logout Modal */
 
   modalOverlay: {
     flex: 1,

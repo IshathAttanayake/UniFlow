@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -19,20 +20,23 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Load saved user account
-  useEffect(() => {
-    loadUser();
-  }, []);
+// Load saved user account
+const loadUser = useCallback(async () => {
+  try {
+    const savedUser = await getUser();
+    setUser(savedUser);
+  } catch (error) {
+    console.log("Error loading user:", error);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
-  const loadUser = async () => {
-    try {
-      const savedUser = await getUser();
-      setUser(savedUser);
-    } catch (error) {
-      console.log("Error loading user:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+useFocusEffect(
+  useCallback(() => {
+    loadUser();
+  }, [loadUser])
+);
 
   const handleLogout = async () => {
     setShowLogoutModal(false);

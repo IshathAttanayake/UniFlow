@@ -71,7 +71,6 @@ export async function loginUser(
 
 export async function logoutUser() {
   await AsyncStorage.removeItem(SESSION_KEY);
-  await AsyncStorage.removeItem(USER_KEY);
 }
 
 export async function isLoggedIn(): Promise<boolean> {

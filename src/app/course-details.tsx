@@ -1,17 +1,128 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+
+const courses = [
+  {
+    name: "Database Management Systems",
+    code: "CS 2021",
+    lecturer: "Dr. Kasun Perera",
+    lecturerRole: "Senior Lecturer",
+    progress: 72,
+    assignments: 8,
+    completed: 5,
+    classes: 3,
+    upcomingAssignment: "Database Assignment",
+    assignmentDescription: "SQL queries and database design",
+    deadline: "Due tomorrow",
+    nextClassTime: "11:00",
+    nextClassPeriod: "AM",
+    location: "Lab 02",
+    classType: "Lab",
+  },
+  {
+    name: "Object Oriented Programming",
+    code: "CS 2022",
+    lecturer: "Mr. Nimal Fernando",
+    lecturerRole: "Lecturer",
+    progress: 65,
+    assignments: 6,
+    completed: 4,
+    classes: 3,
+    upcomingAssignment: "Java OOP Assignment",
+    assignmentDescription: "Classes, objects and inheritance",
+    deadline: "Due in 3 days",
+    nextClassTime: "9:00",
+    nextClassPeriod: "AM",
+    location: "Room 304",
+    classType: "Lecture",
+  },
+  {
+    name: "Software Engineering",
+    code: "CS 2023",
+    lecturer: "Dr. Sanduni Silva",
+    lecturerRole: "Senior Lecturer",
+    progress: 80,
+    assignments: 5,
+    completed: 4,
+    classes: 3,
+    upcomingAssignment: "Software Design Report",
+    assignmentDescription: "Software architecture and design",
+    deadline: "Due next week",
+    nextClassTime: "1:00",
+    nextClassPeriod: "PM",
+    location: "Room 205",
+    classType: "Lecture",
+  },
+  {
+    name: "Data Structures & Algorithms",
+    code: "CS 2024",
+    lecturer: "Mr. Tharindu Jayasinghe",
+    lecturerRole: "Lecturer",
+    progress: 58,
+    assignments: 7,
+    completed: 3,
+    classes: 3,
+    upcomingAssignment: "Algorithm Analysis",
+    assignmentDescription: "Sorting and searching algorithms",
+    deadline: "Due in 4 days",
+    nextClassTime: "10:00",
+    nextClassPeriod: "AM",
+    location: "Lab 01",
+    classType: "Lab",
+  },
+  {
+    name: "Operating Systems",
+    code: "CS 2025",
+    lecturer: "Dr. Chamara Perera",
+    lecturerRole: "Senior Lecturer",
+    progress: 70,
+    assignments: 6,
+    completed: 4,
+    classes: 3,
+    upcomingAssignment: "Process Management",
+    assignmentDescription: "Processes, threads and scheduling",
+    deadline: "Due in 5 days",
+    nextClassTime: "2:00",
+    nextClassPeriod: "PM",
+    location: "Room 401",
+    classType: "Lecture",
+  },
+  {
+    name: "Computer Networks",
+    code: "CS 2026",
+    lecturer: "Mr. Kasun Silva",
+    lecturerRole: "Lecturer",
+    progress: 62,
+    assignments: 5,
+    completed: 3,
+    classes: 3,
+    upcomingAssignment: "Network Configuration",
+    assignmentDescription: "IP addressing and Packet Tracer",
+    deadline: "Due in 2 days",
+    nextClassTime: "8:00",
+    nextClassPeriod: "AM",
+    location: "Network Lab",
+    classType: "Practical",
+  },
+];
 
 export default function CourseDetailsScreen() {
   const { course } = useLocalSearchParams();
 
-  const courseName = course || "Database Management Systems";
+  const courseName =
+    typeof course === "string"
+      ? course
+      : "Database Management Systems";
+
+  const selectedCourse =
+    courses.find((item) => item.name === courseName) || courses[0];
 
   return (
     <View style={styles.container}>
@@ -23,12 +134,19 @@ export default function CourseDetailsScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
+            activeOpacity={0.8}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={22} color="#111827" />
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#111827"
+            />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Course Details</Text>
+          <Text style={styles.headerTitle}>
+            Course Details
+          </Text>
 
           <View style={styles.headerSpacer} />
         </View>
@@ -36,49 +154,86 @@ export default function CourseDetailsScreen() {
         {/* Course Hero */}
         <View style={styles.heroCard}>
           <View style={styles.courseIcon}>
-            <Ionicons name="book" size={30} color="#4F46E5" />
+            <Ionicons
+              name="book"
+              size={30}
+              color="#4F46E5"
+            />
           </View>
 
-          <Text style={styles.courseName}>{courseName}</Text>
+          <Text style={styles.courseName}>
+            {selectedCourse.name}
+          </Text>
 
-          <Text style={styles.courseCode}>CS 2021</Text>
+          <Text style={styles.courseCode}>
+            {selectedCourse.code}
+          </Text>
 
+          {/* Progress */}
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Course Progress</Text>
-              <Text style={styles.progressValue}>72%</Text>
+              <Text style={styles.progressLabel}>
+                Course Progress
+              </Text>
+
+              <Text style={styles.progressValue}>
+                {selectedCourse.progress}%
+              </Text>
             </View>
 
             <View style={styles.progressBackground}>
-              <View style={styles.progressBar} />
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${selectedCourse.progress}%`,
+                  },
+                ]}
+              />
             </View>
           </View>
         </View>
 
         {/* Lecturer */}
-        <Text style={styles.sectionTitle}>Lecturer</Text>
+        <Text style={styles.sectionTitle}>
+          Lecturer
+        </Text>
 
         <View style={styles.card}>
           <View style={styles.lecturerAvatar}>
-            <Ionicons name="person" size={24} color="#4F46E5" />
+            <Ionicons
+              name="person"
+              size={24}
+              color="#4F46E5"
+            />
           </View>
 
           <View style={styles.lecturerInfo}>
-            <Text style={styles.lecturerName}>Dr. Kasun Perera</Text>
+            <Text style={styles.lecturerName}>
+              {selectedCourse.lecturer}
+            </Text>
+
             <Text style={styles.lecturerRole}>
-              Senior Lecturer
+              {selectedCourse.lecturerRole}
             </Text>
           </View>
 
-          <Ionicons
-            name="mail-outline"
-            size={22}
-            color="#4F46E5"
-          />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {}}
+          >
+            <Ionicons
+              name="mail-outline"
+              size={22}
+              color="#4F46E5"
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Statistics */}
-        <Text style={styles.sectionTitle}>Course Overview</Text>
+        <Text style={styles.sectionTitle}>
+          Course Overview
+        </Text>
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
@@ -87,8 +242,14 @@ export default function CourseDetailsScreen() {
               size={23}
               color="#4F46E5"
             />
-            <Text style={styles.statNumber}>8</Text>
-            <Text style={styles.statLabel}>Assignments</Text>
+
+            <Text style={styles.statNumber}>
+              {selectedCourse.assignments}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Assignments
+            </Text>
           </View>
 
           <View style={styles.statCard}>
@@ -97,8 +258,14 @@ export default function CourseDetailsScreen() {
               size={23}
               color="#4F46E5"
             />
-            <Text style={styles.statNumber}>5</Text>
-            <Text style={styles.statLabel}>Completed</Text>
+
+            <Text style={styles.statNumber}>
+              {selectedCourse.completed}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Completed
+            </Text>
           </View>
 
           <View style={styles.statCard}>
@@ -107,15 +274,27 @@ export default function CourseDetailsScreen() {
               size={23}
               color="#4F46E5"
             />
-            <Text style={styles.statNumber}>3</Text>
-            <Text style={styles.statLabel}>Classes</Text>
+
+            <Text style={styles.statNumber}>
+              {selectedCourse.classes}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Classes
+            </Text>
           </View>
         </View>
 
         {/* Upcoming Assignment */}
-        <Text style={styles.sectionTitle}>Upcoming Assignment</Text>
+        <Text style={styles.sectionTitle}>
+          Upcoming Assignment
+        </Text>
 
-        <View style={styles.assignmentCard}>
+        <TouchableOpacity
+          style={styles.assignmentCard}
+          activeOpacity={0.8}
+          onPress={() => router.push("/assignments")}
+        >
           <View style={styles.assignmentIcon}>
             <Ionicons
               name="document-text"
@@ -126,15 +305,15 @@ export default function CourseDetailsScreen() {
 
           <View style={styles.assignmentInfo}>
             <Text style={styles.assignmentTitle}>
-              Database Assignment
+              {selectedCourse.upcomingAssignment}
             </Text>
 
             <Text style={styles.assignmentDescription}>
-              SQL queries and database design
+              {selectedCourse.assignmentDescription}
             </Text>
 
             <Text style={styles.deadline}>
-              Due tomorrow
+              {selectedCourse.deadline}
             </Text>
           </View>
 
@@ -143,30 +322,122 @@ export default function CourseDetailsScreen() {
             size={20}
             color="#94A3B8"
           />
-        </View>
+        </TouchableOpacity>
 
         {/* Next Class */}
-        <Text style={styles.sectionTitle}>Next Class</Text>
+        <Text style={styles.sectionTitle}>
+          Next Class
+        </Text>
 
-        <View style={styles.classCard}>
+        <TouchableOpacity
+          style={styles.classCard}
+          activeOpacity={0.8}
+          onPress={() => router.push("/schedule")}
+        >
           <View style={styles.timeBox}>
-            <Text style={styles.time}>11:00</Text>
-            <Text style={styles.period}>AM</Text>
+            <Text style={styles.time}>
+              {selectedCourse.nextClassTime}
+            </Text>
+
+            <Text style={styles.period}>
+              {selectedCourse.nextClassPeriod}
+            </Text>
           </View>
 
           <View style={styles.classInfo}>
             <Text style={styles.classTitle}>
-              Database Management Systems
+              {selectedCourse.name}
             </Text>
 
-            <Text style={styles.location}>
-              Lab 02
-            </Text>
+            <View style={styles.locationRow}>
+              <Ionicons
+                name="location-outline"
+                size={14}
+                color="#64748B"
+              />
+
+              <Text style={styles.location}>
+                {selectedCourse.location}
+              </Text>
+            </View>
 
             <Text style={styles.classType}>
-              Lab
+              {selectedCourse.classType}
             </Text>
           </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
+
+        {/* Course Actions */}
+        <Text style={styles.sectionTitle}>
+          Quick Actions
+        </Text>
+
+        <View style={styles.actionsCard}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.8}
+            onPress={() => router.push("/assignments")}
+          >
+            <View style={styles.actionIcon}>
+              <Ionicons
+                name="document-text-outline"
+                size={21}
+                color="#4F46E5"
+              />
+            </View>
+
+            <View style={styles.actionInfo}>
+              <Text style={styles.actionTitle}>
+                View Assignments
+              </Text>
+
+              <Text style={styles.actionDescription}>
+                Check your course assignments
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.8}
+            onPress={() => router.push("/schedule")}
+          >
+            <View style={styles.actionIcon}>
+              <Ionicons
+                name="calendar-outline"
+                size={21}
+                color="#4F46E5"
+              />
+            </View>
+
+            <View style={styles.actionInfo}>
+              <Text style={styles.actionTitle}>
+                View Schedule
+              </Text>
+
+              <Text style={styles.actionDescription}>
+                Check upcoming classes
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -276,7 +547,6 @@ const styles = StyleSheet.create({
   },
 
   progressBar: {
-    width: "72%",
     height: "100%",
     backgroundColor: "#4F46E5",
     borderRadius: 5,
@@ -436,10 +706,16 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+
   location: {
     fontSize: 12,
     color: "#64748B",
-    marginTop: 5,
+    marginLeft: 4,
   },
 
   classType: {
@@ -447,5 +723,47 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#4F46E5",
     marginTop: 4,
+  },
+
+  actionsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 17,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+
+  actionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 13,
+  },
+
+  actionInfo: {
+    flex: 1,
+  },
+
+  actionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  actionDescription: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 3,
   },
 });

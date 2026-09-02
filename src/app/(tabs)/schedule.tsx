@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ScrollView,
   StyleSheet,
@@ -16,6 +18,7 @@ const days = [
   { short: "Fri", full: "Friday", date: "29" },
 ];
 
+const SCHEDULE_KEY = "@uniflow_schedule";
 const scheduleData: Record<string, any[]> = {
   Monday: [
     {
@@ -156,7 +159,37 @@ const scheduleData: Record<string, any[]> = {
 export default function ScheduleScreen() {
   const [selectedDay, setSelectedDay] = useState("Monday");
 
-  const classes = scheduleData[selectedDay] || [];
+  const [schedule, setSchedule] =
+    useState<Record<string, any[]>>(scheduleData);
+
+  const classes = schedule[selectedDay] || [];
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSchedule();
+    }, [])
+  );
+
+  const loadSchedule = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(
+        SCHEDULE_KEY
+      );
+
+      if (saved) {
+        setSchedule(JSON.parse(saved));
+      } else {
+        await AsyncStorage.setItem(
+          SCHEDULE_KEY,
+          JSON.stringify(scheduleData)
+        );
+
+        setSchedule(scheduleData);
+      }
+    } catch (error) {
+      console.log("Schedule load error:", error);
+    }
+  };
 
   return (
     <View style={styles.container}>

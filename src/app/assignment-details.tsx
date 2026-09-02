@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -13,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ASSIGNMENTS_KEY = "@uniflow_assignments";
 
@@ -183,78 +183,98 @@ export default function AssignmentDetailsScreen() {
     }
   };
 
- const handleDelete = async () => {
-  if (!assignment) {
-    console.log("DELETE: No assignment loaded");
+ const [isDeleting, setIsDeleting] = useState(false);
+
+const handleDelete = async () => {
+  if (!assignment || isDeleting) {
     return;
   }
 
-  console.log("DELETE: Starting...");
-  console.log("DELETE: Assignment ID =", assignment.id);
-
   try {
+    setIsDeleting(true);
+
+    console.log("DELETE: Starting...");
+    console.log("DELETE: Assignment ID =", assignment.id);
+
     const storedData = await AsyncStorage.getItem(
       ASSIGNMENTS_KEY
     );
 
-    console.log("DELETE: Storage =", storedData);
-
     if (!storedData) {
-      console.log("DELETE: Storage is empty");
       Alert.alert("Error", "No assignments found.");
+      setIsDeleting(false);
       return;
     }
 
-    const assignments: Assignment[] = JSON.parse(storedData);
+    const assignments: Assignment[] =
+      JSON.parse(storedData);
+
+    const remainingAssignments =
+      assignments.filter(
+        (item) =>
+          String(item.id) !== String(assignment.id)
+      );
 
     console.log(
-      "DELETE: Number of assignments before =",
+      "DELETE: Before =",
       assignments.length
     );
 
-    const remainingAssignments = assignments.filter(
-      (item) =>
-        String(item.id) !== String(assignment.id)
-    );
-
     console.log(
-      "DELETE: Number of assignments after =",
+      "DELETE: After =",
       remainingAssignments.length
     );
+
+    // Make sure the assignment actually existed
+    if (
+      remainingAssignments.length ===
+      assignments.length
+    ) {
+      console.log(
+        "DELETE: Assignment was not found."
+      );
+
+      Alert.alert(
+        "Already Deleted",
+        "This assignment has already been deleted.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              router.back();
+            },
+          },
+        ]
+      );
+
+      return;
+    }
 
     await AsyncStorage.setItem(
       ASSIGNMENTS_KEY,
       JSON.stringify(remainingAssignments)
     );
 
-    // Verify that it was actually saved
-    const verifyData = await AsyncStorage.getItem(
-      ASSIGNMENTS_KEY
-    );
-
     console.log(
-      "DELETE: Storage after delete =",
-      verifyData
+      "DELETE: Successfully deleted"
     );
 
-    Alert.alert(
-      "Deleted",
-      "Assignment deleted successfully.",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            router.replace("/(tabs)/assignments");
-          },
-        },
-      ]
-    );
+    // Clear the current assignment
+    setAssignment(null);
+
+    // Go back to the assignment list
+    router.back();
   } catch (error) {
-    console.log("DELETE ERROR:", error);
+    console.log(
+      "DELETE ERROR:",
+      error
+    );
+
+    setIsDeleting(false);
 
     Alert.alert(
       "Delete Failed",
-      "Could not delete the assignment."
+      "Something went wrong while deleting the assignment."
     );
   }
 };
@@ -406,16 +426,21 @@ const performDelete = async () => {
           </Text>
 
           <TouchableOpacity
-            style={styles.deleteButton}
-            activeOpacity={0.8}
-            onPress={handleDelete}
-          >
-            <Ionicons
-              name="trash-outline"
-              size={21}
-              color="#EF4444"
-            />
-          </TouchableOpacity>
+  style={styles.deleteButton}
+  onPress={handleDelete}
+  disabled={isDeleting}
+  activeOpacity={0.8}
+>
+  <Ionicons
+    name="trash-outline"
+    size={20}
+    color="#EF4444"
+  />
+
+  <Text style={styles.deleteButtonText}>
+    {isDeleting ? "Deleting..." : "Delete Assignment"}
+  </Text>
+</TouchableOpacity>
         </View>
 
         {/* Main Card */}
@@ -717,20 +742,21 @@ const performDelete = async () => {
 
         {/* Delete */}
         <TouchableOpacity
-          style={styles.deleteFullButton}
-          activeOpacity={0.8}
-          onPress={handleDelete}
-        >
-          <Ionicons
-            name="trash-outline"
-            size={20}
-            color="#EF4444"
-          />
+  style={styles.deleteButton}
+  onPress={handleDelete}
+  disabled={isDeleting}
+  activeOpacity={0.8}
+>
+  <Ionicons
+    name="trash-outline"
+    size={20}
+    color="#EF4444"
+  />
 
-          <Text style={styles.deleteFullText}>
-            Delete Assignment
-          </Text>
-        </TouchableOpacity>
+  <Text style={styles.deleteButtonText}>
+    {isDeleting ? "Deleting..." : "Delete Assignment"}
+  </Text>
+</TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -871,13 +897,24 @@ const styles = StyleSheet.create({
   },
 
   deleteButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "#FEF2F2",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  marginTop: 20,
+  marginBottom: 30,
+  height: 52,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#FCA5A5",
+  backgroundColor: "#FEF2F2",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+},
+
+deleteButtonText: {
+  color: "#EF4444",
+  fontSize: 16,
+  fontWeight: "600",
+},
 
   heroCard: {
     backgroundColor: "#FFFFFF",
@@ -1244,4 +1281,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#EF4444",
   },
+
 });

@@ -1,7 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useState } from "react";
-import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -157,39 +161,57 @@ const scheduleData: Record<string, any[]> = {
 };
 
 export default function ScheduleScreen() {
+  const params = useLocalSearchParams();
+
   const [selectedDay, setSelectedDay] = useState("Monday");
 
   const [schedule, setSchedule] =
     useState<Record<string, any[]>>(scheduleData);
 
-  const classes = schedule[selectedDay] || [];
-
   useFocusEffect(
     useCallback(() => {
       loadSchedule();
-    }, [])
+
+      if (
+        typeof params.day === "string" &&
+        days.some((day) => day.full === params.day)
+      ) {
+        setSelectedDay(params.day);
+      }
+    }, [params.day])
   );
 
+  const classes = schedule[selectedDay] || [];
+
+
   const loadSchedule = async () => {
-    try {
-      const saved = await AsyncStorage.getItem(
-        SCHEDULE_KEY
+  try {
+    console.log("SCHEDULE: Loading schedule...");
+
+    const saved = await AsyncStorage.getItem(SCHEDULE_KEY);
+
+    console.log("SCHEDULE: Storage:", saved);
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      console.log("SCHEDULE: Parsed schedule:", parsed);
+
+      setSchedule(parsed);
+    } else {
+      console.log("SCHEDULE: No saved schedule");
+
+      await AsyncStorage.setItem(
+        SCHEDULE_KEY,
+        JSON.stringify(scheduleData)
       );
 
-      if (saved) {
-        setSchedule(JSON.parse(saved));
-      } else {
-        await AsyncStorage.setItem(
-          SCHEDULE_KEY,
-          JSON.stringify(scheduleData)
-        );
-
-        setSchedule(scheduleData);
-      }
-    } catch (error) {
-      console.log("Schedule load error:", error);
+      setSchedule(scheduleData);
     }
-  };
+  } catch (error) {
+    console.log("SCHEDULE LOAD ERROR:", error);
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -202,6 +224,22 @@ export default function ScheduleScreen() {
         <Text style={styles.subtitle}>
           Manage your weekly class timetable
         </Text>
+        <TouchableOpacity
+  style={styles.addClassButton}
+  onPress={() => router.push("../add-class")}
+  activeOpacity={0.8}
+>
+  <Ionicons
+    name="add-circle-outline"
+    size={20}
+    color="#FFFFFF"
+  />
+
+  <Text style={styles.addClassButtonText}>
+    Add Class
+  </Text>
+</TouchableOpacity>
+        
 
         {/* Day Selector */}
         <ScrollView
@@ -596,4 +634,21 @@ const styles = StyleSheet.create({
     color: "#E0E7FF",
     marginTop: 4,
   },
+
+  addClassButton: {
+  height: 50,
+  borderRadius: 14,
+  backgroundColor: "#4F46E5",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  marginBottom: 20,
+},
+
+addClassButtonText: {
+  color: "#FFFFFF",
+  fontSize: 15,
+  fontWeight: "800",
+},
 });

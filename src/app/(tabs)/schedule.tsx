@@ -306,7 +306,20 @@ export default function ScheduleScreen() {
         {classes.length > 0 ? (
           <View style={styles.scheduleList}>
             {classes.map((item, index) => (
-              <View key={`${item.subject}-${index}`} style={styles.classCard}>
+              <TouchableOpacity
+  key={`${item.subject}-${index}`}
+  style={styles.classCard}
+  activeOpacity={0.8}
+  onPress={() =>
+    router.push({
+      pathname: "/class-details",
+      params: {
+        id: item.id,
+        day: selectedDay,
+      },
+    })
+  }
+>
                 <View style={styles.timeContainer}>
                   <Text style={styles.time}>{item.time}</Text>
                   <Text style={styles.period}>{item.period}</Text>
@@ -343,7 +356,7 @@ export default function ScheduleScreen() {
                     </Text>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ) : (

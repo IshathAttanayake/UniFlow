@@ -92,23 +92,123 @@ export default function AssignmentsScreen() {
     }
   };
 
-  const completedCount = assignments.filter(
-    (assignment) =>
-      assignment.status === "completed" ||
-      assignment.progress >= 100
-  ).length;
+  const parseAssignmentDate = (dateString: string) => {
+  const parsed = new Date(dateString);
 
-  const dueSoonCount = assignments.filter(
-    (assignment) =>
-      assignment.status === "urgent" &&
-      assignment.progress < 100
-  ).length;
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
 
-  const upcomingAssignments = assignments.filter(
-    (assignment) =>
-      assignment.status !== "completed" &&
-      assignment.progress < 100
+  parsed.setHours(0, 0, 0, 0);
+
+  return parsed;
+};
+
+const getToday = () => {
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  return today;
+};
+
+const getAssignmentStatus = (assignment: Assignment) => {
+  if (
+    assignment.status === "completed" ||
+    assignment.progress >= 100
+  ) {
+    return "completed";
+  }
+
+  const dueDate = parseAssignmentDate(assignment.date);
+
+  if (!dueDate) {
+    return assignment.status;
+  }
+
+  const today = getToday();
+
+  const difference =
+    dueDate.getTime() - today.getTime();
+
+  const daysUntilDue = Math.ceil(
+    difference / (1000 * 60 * 60 * 24)
   );
+
+  if (daysUntilDue < 0) {
+    return "overdue";
+  }
+
+  if (daysUntilDue <= 1) {
+    return "urgent";
+  }
+
+  return "upcoming";
+};
+
+const getAssignmentDueText = (
+  assignment: Assignment
+) => {
+  if (
+    assignment.status === "completed" ||
+    assignment.progress >= 100
+  ) {
+    return "Completed";
+  }
+
+  const dueDate = parseAssignmentDate(assignment.date);
+
+  if (!dueDate) {
+    return assignment.due;
+  }
+
+  const today = getToday();
+
+  const difference =
+    dueDate.getTime() - today.getTime();
+
+  const daysUntilDue = Math.ceil(
+    difference / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysUntilDue < 0) {
+    const overdueDays = Math.abs(daysUntilDue);
+
+    return overdueDays === 1
+      ? "Overdue by 1 day"
+      : `Overdue by ${overdueDays} days`;
+  }
+
+  if (daysUntilDue === 0) {
+    return "Due today";
+  }
+
+  if (daysUntilDue === 1) {
+    return "Due tomorrow";
+  }
+
+  return `Due in ${daysUntilDue} days`;
+};
+
+const completedCount = assignments.filter(
+  (assignment) =>
+    getAssignmentStatus(assignment) === "completed"
+).length;
+
+const overdueCount = assignments.filter(
+  (assignment) =>
+    getAssignmentStatus(assignment) === "overdue"
+).length;
+
+const dueSoonCount = assignments.filter(
+  (assignment) =>
+    getAssignmentStatus(assignment) === "urgent"
+).length;
+
+const upcomingAssignments = assignments.filter(
+  (assignment) =>
+    getAssignmentStatus(assignment) !== "completed"
+);
 
   const openAssignment = (assignment: Assignment) => {
     router.push({
@@ -300,8 +400,17 @@ export default function AssignmentsScreen() {
         {upcomingAssignments.length > 0 ? (
           <View style={styles.assignmentList}>
             {upcomingAssignments.map((assignment) => {
-              const statusColor =
-                getStatusColor(assignment);
+              const currentStatus =
+  getAssignmentStatus(assignment);
+
+const statusColor =
+  currentStatus === "completed"
+    ? "#10B981"
+    : currentStatus === "overdue"
+    ? "#EF4444"
+    : currentStatus === "urgent"
+    ? "#F59E0B"
+    : "#4F46E5";
 
               return (
                 <TouchableOpacity

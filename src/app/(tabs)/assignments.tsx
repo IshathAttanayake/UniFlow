@@ -11,7 +11,11 @@ import {
   View,
 } from "react-native";
 
-type AssignmentStatus = "urgent" | "upcoming" | "completed";
+type AssignmentStatus =
+  | "urgent"
+  | "upcoming"
+  | "completed"
+  | "overdue";
 
 type Assignment = {
   id: string;
@@ -526,7 +530,7 @@ const statusColor =
                             : styles.normalText,
                         ]}
                       >
-                        {assignment.due}
+                        {getAssignmentDueText(assignment)}
                       </Text>
                     </View>
                   </View>

@@ -12,235 +12,171 @@ import {
   View,
 } from "react-native";
 
-type AssignmentStatus =
-  | "urgent"
-  | "upcoming"
-  | "completed"
-  | "overdue";
+import { getUser, User } from "../../utils/auth";
 
-type Assignment = {
-  id: string;
-  title: string;
-  course: string;
-  due: string;
-  date: string;
-  status: AssignmentStatus;
-  progress: number;
-  description?: string;
+type ClassItem = {
+  id?: string;
+  time: string;
+  period: string;
+  subject: string;
+  lecturer: string;
+  location: string;
+  type: string;
 };
 
-const ASSIGNMENTS_KEY = "@uniflow_assignments";
+type Schedule = Record<string, ClassItem[]>;
 
-const defaultAssignments: Assignment[] = [
-  {
-    id: "1",
-    title: "Database Assignment",
-    course: "Database Management Systems",
-    due: "Due tomorrow",
-    date: "Aug 26, 2026",
-    status: "urgent",
-    progress: 70,
-    description: "SQL queries and database design",
-  },
-  {
-    id: "2",
-    title: "Java OOP Project",
-    course: "Object Oriented Programming",
-    due: "Due in 4 days",
-    date: "Aug 29, 2026",
-    status: "upcoming",
-    progress: 45,
-    description: "Object oriented programming project",
-  },
-  {
-    id: "3",
-    title: "Software Engineering Report",
-    course: "Software Engineering",
-    due: "Due in 7 days",
-    date: "Sep 1, 2026",
-    status: "upcoming",
-    progress: 20,
-    description: "Software engineering report",
-  },
-];
+const SCHEDULE_KEY = "@uniflow_schedule";
+
+const defaultSchedule: Schedule = {
+  Monday: [
+    {
+      time: "09:00",
+      period: "AM",
+      subject: "Software Engineering",
+      lecturer: "Dr. Kasun Perera",
+      location: "Lecture Hall A",
+      type: "Lecture",
+    },
+    {
+      time: "11:00",
+      period: "AM",
+      subject: "Database Management Systems",
+      lecturer: "Ms. Nadeesha Silva",
+      location: "Lab 02",
+      type: "Lab",
+    },
+  ],
+
+  Tuesday: [
+    {
+      time: "09:00",
+      period: "AM",
+      subject: "Computer Networks",
+      lecturer: "Mr. Dilan Perera",
+      location: "Lab 03",
+      type: "Lab",
+    },
+  ],
+
+  Wednesday: [
+    {
+      time: "10:00",
+      period: "AM",
+      subject: "Database Management Systems",
+      lecturer: "Ms. Nadeesha Silva",
+      location: "Lecture Hall A",
+      type: "Lecture",
+    },
+  ],
+
+  Thursday: [
+    {
+      time: "09:00",
+      period: "AM",
+      subject: "Data Structures & Algorithms",
+      lecturer: "Mr. Chamara Jayasinghe",
+      location: "Lecture Hall A",
+      type: "Lecture",
+    },
+  ],
+
+  Friday: [
+    {
+      time: "09:00",
+      period: "AM",
+      subject: "Object Oriented Programming",
+      lecturer: "Mr. Tharindu Fernando",
+      location: "Lecture Hall A",
+      type: "Lecture",
+    },
+  ],
+};
 
 export default function DashboardScreen() {
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [schedule, setSchedule] =
+    useState<Schedule>(defaultSchedule);
+
+  const [loadingSchedule, setLoadingSchedule] =
+    useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      loadAssignments();
+      loadSchedule();
     }, [])
   );
+  const [user, setUser] = useState<User | null>(null);
+const [loadingUser, setLoadingUser] = useState(true);
 
-  const loadAssignments = async () => {
+const loadUser = useCallback(async () => {
+  try {
+    const savedUser = await getUser();
+    setUser(savedUser);
+  } catch (error) {
+    console.log("Error loading user:", error);
+  } finally {
+    setLoadingUser(false);
+  }
+}, []);
+
+useFocusEffect(
+  useCallback(() => {
+    loadUser();
+  }, [loadUser])
+);
+
+  const loadSchedule = async () => {
     try {
-      const saved = await AsyncStorage.getItem(ASSIGNMENTS_KEY);
+      const saved = await AsyncStorage.getItem(
+        SCHEDULE_KEY
+      );
 
       if (saved) {
-        const parsed: Assignment[] = JSON.parse(saved);
-        setAssignments(parsed);
+        const parsed: Schedule = JSON.parse(saved);
+        setSchedule(parsed);
       } else {
         await AsyncStorage.setItem(
-          ASSIGNMENTS_KEY,
-          JSON.stringify(defaultAssignments)
+          SCHEDULE_KEY,
+          JSON.stringify(defaultSchedule)
         );
 
-        setAssignments(defaultAssignments);
+        setSchedule(defaultSchedule);
       }
     } catch (error) {
-      console.log("Error loading dashboard assignments:", error);
-      setAssignments(defaultAssignments);
+      console.log(
+        "Dashboard schedule load error:",
+        error
+      );
+
+      setSchedule(defaultSchedule);
     } finally {
-      setLoading(false);
+      setLoadingSchedule(false);
     }
   };
 
-  const parseAssignmentDate = (dateString: string) => {
-    const parsed = new Date(dateString);
-
-    if (Number.isNaN(parsed.getTime())) {
-      return null;
+  // Get today's day name.
+  const today = new Date().toLocaleDateString(
+    "en-US",
+    {
+      weekday: "long",
     }
-
-    parsed.setHours(0, 0, 0, 0);
-
-    return parsed;
-  };
-
-  const getToday = () => {
-    const today = new Date();
-
-    today.setHours(0, 0, 0, 0);
-
-    return today;
-  };
-
-  const getAssignmentStatus = (assignment: Assignment) => {
-    if (
-      assignment.status === "completed" ||
-      assignment.progress >= 100
-    ) {
-      return "completed";
-    }
-
-    const dueDate = parseAssignmentDate(assignment.date);
-
-    if (!dueDate) {
-      return assignment.status;
-    }
-
-    const today = getToday();
-
-    const difference =
-      dueDate.getTime() - today.getTime();
-
-    const daysUntilDue = Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysUntilDue < 0) {
-      return "overdue";
-    }
-
-    if (daysUntilDue <= 1) {
-      return "urgent";
-    }
-
-    return "upcoming";
-  };
-
-  const getAssignmentDueText = (assignment: Assignment) => {
-    if (
-      assignment.status === "completed" ||
-      assignment.progress >= 100
-    ) {
-      return "Completed";
-    }
-
-    const dueDate = parseAssignmentDate(assignment.date);
-
-    if (!dueDate) {
-      return assignment.due;
-    }
-
-    const today = getToday();
-
-    const difference =
-      dueDate.getTime() - today.getTime();
-
-    const daysUntilDue = Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysUntilDue < 0) {
-      const overdueDays = Math.abs(daysUntilDue);
-
-      return overdueDays === 1
-        ? "Overdue by 1 day"
-        : `Overdue by ${overdueDays} days`;
-    }
-
-    if (daysUntilDue === 0) {
-      return "Due today";
-    }
-
-    if (daysUntilDue === 1) {
-      return "Due tomorrow";
-    }
-
-    return `Due in ${daysUntilDue} days`;
-  };
-
-  const completedCount = assignments.filter(
-    (assignment) =>
-      getAssignmentStatus(assignment) === "completed"
-  ).length;
-
-  const activeAssignments = assignments.filter(
-    (assignment) =>
-      getAssignmentStatus(assignment) !== "completed"
   );
 
-  const dueSoonCount = assignments.filter(
-    (assignment) => {
-      const status = getAssignmentStatus(assignment);
+  const todaysClasses =
+    schedule[today] || [];
 
-      return (
-        status === "urgent" ||
-        status === "overdue"
-      );
-    }
-  ).length;
+  // Show the next 2 classes on Dashboard.
+  const dashboardClasses =
+    todaysClasses.slice(0, 2);
 
-  const upcomingAssignments = [...activeAssignments]
-    .sort((a, b) => {
-      const dateA = parseAssignmentDate(a.date);
-      const dateB = parseAssignmentDate(b.date);
-
-      if (!dateA || !dateB) {
-        return 0;
-      }
-
-      return dateA.getTime() - dateB.getTime();
-    })
-    .slice(0, 2);
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator
-          size="large"
-          color="#4F46E5"
-        />
-
-        <Text style={styles.loadingText}>
-          Loading dashboard...
-        </Text>
-      </View>
-    );
-  }
+  // Count all classes in the weekly schedule.
+  const totalClasses = Object.values(
+    schedule
+  ).reduce(
+    (total, dayClasses) =>
+      total + dayClasses.length,
+    0
+  );
 
   return (
     <View style={styles.container}>
@@ -257,9 +193,13 @@ export default function DashboardScreen() {
               Good morning 👋
             </Text>
 
-            <Text style={styles.name}>
-              Ishath
-            </Text>
+            {loadingUser ? (
+  <ActivityIndicator color="#4F46E5" />
+) : (
+  <Text style={styles.name}>
+    {user?.name || "Student"}
+  </Text>
+)}
           </View>
 
           <View style={styles.headerRight}>
@@ -285,19 +225,25 @@ export default function DashboardScreen() {
               style={styles.profile}
               activeOpacity={0.8}
               onPress={() =>
-                router.push("/(tabs)/profile")
+                router.push(
+                  "/(tabs)/profile"
+                )
               }
             >
-              <Text style={styles.profileText}>
-                I
-              </Text>
+              {loadingUser ? (
+  <ActivityIndicator color="#FFFFFF" />
+) : (
+  <Text style={styles.profileText}>
+    {user?.name?.trim().charAt(0).toUpperCase() || "U"}
+  </Text>
+)}
             </TouchableOpacity>
           </View>
         </View>
 
         <Text style={styles.subtitle}>
-          Here's what's happening with your studies
-          today.
+          Here's what's happening with your
+          studies today.
         </Text>
 
         {/* Quick Stats */}
@@ -307,7 +253,9 @@ export default function DashboardScreen() {
             style={styles.statCard}
             activeOpacity={0.8}
             onPress={() =>
-              router.push("/(tabs)/courses")
+              router.push(
+                "/(tabs)/courses"
+              )
             }
           >
             <Text style={styles.statNumber}>
@@ -324,11 +272,13 @@ export default function DashboardScreen() {
             style={styles.statCard}
             activeOpacity={0.8}
             onPress={() =>
-              router.push("/(tabs)/assignments")
+              router.push(
+                "/(tabs)/assignments"
+              )
             }
           >
             <Text style={styles.statNumber}>
-              {assignments.length}
+              3
             </Text>
 
             <Text style={styles.statLabel}>
@@ -341,11 +291,13 @@ export default function DashboardScreen() {
             style={styles.statCard}
             activeOpacity={0.8}
             onPress={() =>
-              router.push("/(tabs)/schedule")
+              router.push(
+                "/(tabs)/schedule"
+              )
             }
           >
             <Text style={styles.statNumber}>
-              2
+              {totalClasses}
             </Text>
 
             <Text style={styles.statLabel}>
@@ -373,48 +325,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Assignment Overview */}
-        <View style={styles.assignmentOverview}>
-          <View>
-            <Text style={styles.assignmentOverviewLabel}>
-              Assignment Overview
-            </Text>
-
-            <Text style={styles.assignmentOverviewNumber}>
-              {completedCount}
-            </Text>
-
-            <Text style={styles.assignmentOverviewText}>
-              completed
-            </Text>
-          </View>
-
-          <View style={styles.assignmentOverviewRight}>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewNumber}>
-                {activeAssignments.length}
-              </Text>
-
-              <Text style={styles.overviewLabel}>
-                Active
-              </Text>
-            </View>
-
-            <View style={styles.overviewDivider} />
-
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewNumber}>
-                {dueSoonCount}
-              </Text>
-
-              <Text style={styles.overviewLabel}>
-                Due Soon
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Upcoming */}
+        {/* Upcoming Assignments */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
             Upcoming
@@ -434,119 +345,44 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Dynamic Assignments */}
-        {upcomingAssignments.length > 0 ? (
-          upcomingAssignments.map(
-            (assignment) => {
-              const status =
-                getAssignmentStatus(
-                  assignment
-                );
-
-              const isOverdue =
-                status === "overdue";
-
-              const isUrgent =
-                status === "urgent";
-
-              return (
-                <TouchableOpacity
-                  key={assignment.id}
-                  style={styles.assignmentCard}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    router.push({
-                      pathname:
-                        "/assignment-details",
-                      params: {
-                        id: assignment.id,
-                      },
-                    })
-                  }
-                >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      isOverdue &&
-                        styles.overdueIconBox,
-                      isUrgent &&
-                        styles.urgentIconBox,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        isOverdue
-                          ? "alert-circle-outline"
-                          : "document-text-outline"
-                      }
-                      size={23}
-                      color={
-                        isOverdue
-                          ? "#EF4444"
-                          : isUrgent
-                          ? "#F59E0B"
-                          : "#4F46E5"
-                      }
-                    />
-                  </View>
-
-                  <View style={styles.cardInfo}>
-                    <Text
-                      style={styles.cardTitle}
-                      numberOfLines={1}
-                    >
-                      {assignment.title}
-                    </Text>
-
-                    <Text
-                      style={styles.cardSubtitle}
-                      numberOfLines={1}
-                    >
-                      {assignment.course}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.deadline,
-                        isOverdue &&
-                          styles.overdueDeadline,
-                        !isOverdue &&
-                          !isUrgent &&
-                          styles.normalDeadline,
-                      ]}
-                    >
-                      {getAssignmentDueText(
-                        assignment
-                      )}
-                    </Text>
-                  </View>
-
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color="#94A3B8"
-                  />
-                </TouchableOpacity>
-              );
-            }
-          )
-        ) : (
-          <View style={styles.emptyCard}>
+        {/* Keep your existing assignment cards here */}
+        <TouchableOpacity
+          style={styles.assignmentCard}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push(
+              "/(tabs)/assignments"
+            )
+          }
+        >
+          <View style={styles.iconBox}>
             <Ionicons
-              name="checkmark-done-outline"
-              size={28}
-              color="#10B981"
+              name="document-text-outline"
+              size={23}
+              color="#4F46E5"
             />
+          </View>
 
-            <Text style={styles.emptyTitle}>
-              All caught up!
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle}>
+              View your assignments
             </Text>
 
-            <Text style={styles.emptyText}>
-              You don't have any active assignments.
+            <Text style={styles.cardSubtitle}>
+              Check deadlines and progress
+            </Text>
+
+            <Text style={styles.deadline}>
+              Open Assignments
             </Text>
           </View>
-        )}
+
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
 
         {/* Today's Classes */}
         <View style={styles.sectionHeader}>
@@ -568,52 +404,110 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Class */}
-        <TouchableOpacity
-          style={styles.classCard}
-          activeOpacity={0.8}
-          onPress={() =>
-            router.push(
-              "/(tabs)/schedule"
-            )
-          }
-        >
-          <View style={styles.timeBox}>
-            <Text style={styles.time}>
-              09:00
-            </Text>
+        {/* Loading */}
+        {loadingSchedule ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator
+              size="small"
+              color="#4F46E5"
+            />
 
-            <Text style={styles.am}>
-              AM
+            <Text style={styles.loadingText}>
+              Loading today's classes...
             </Text>
           </View>
+        ) : dashboardClasses.length > 0 ? (
+          <View style={styles.classList}>
+            {dashboardClasses.map(
+              (item, index) => (
+                <TouchableOpacity
+                  key={
+                    item.id ||
+                    `${item.subject}-${index}`
+                  }
+                  style={styles.classCard}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push(
+                      "/(tabs)/schedule"
+                    )
+                  }
+                >
+                  {/* Time */}
+                  <View style={styles.timeBox}>
+                    <Text style={styles.time}>
+                      {item.time}
+                    </Text>
 
-          <View style={styles.classInfo}>
-            <Text style={styles.cardTitle}>
-              Software Engineering
-            </Text>
+                    <Text style={styles.am}>
+                      {item.period}
+                    </Text>
+                  </View>
 
-            <Text style={styles.cardSubtitle}>
-              Lecture Hall A
-            </Text>
+                  {/* Class Information */}
+                  <View style={styles.classInfo}>
+                    <Text
+                      style={styles.cardTitle}
+                      numberOfLines={1}
+                    >
+                      {item.subject}
+                    </Text>
 
-            <Text style={styles.classType}>
-              Lecture
-            </Text>
+                    <Text
+                      style={styles.cardSubtitle}
+                      numberOfLines={1}
+                    >
+                      {item.location}
+                    </Text>
+
+                    <Text
+                      style={styles.classType}
+                    >
+                      {item.type}
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color="#94A3B8"
+                  />
+                </TouchableOpacity>
+              )
+            )}
           </View>
+        ) : (
+          <View style={styles.emptyClassCard}>
+            <View style={styles.emptyClassIcon}>
+              <Ionicons
+                name="calendar-clear-outline"
+                size={27}
+                color="#4F46E5"
+              />
+            </View>
 
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
+            <View style={styles.emptyClassInfo}>
+              <Text
+                style={styles.emptyClassTitle}
+              >
+                No classes today
+              </Text>
 
-        {/* Assignment Status */}
+              <Text
+                style={styles.emptyClassText}
+              >
+                You don't have any classes
+                scheduled for today.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Weekly Schedule Summary */}
         <View style={styles.statusCard}>
           <View style={styles.statusIcon}>
             <Ionicons
-              name="stats-chart-outline"
+              name="calendar-outline"
               size={22}
               color="#4F46E5"
             />
@@ -621,13 +515,12 @@ export default function DashboardScreen() {
 
           <View style={styles.statusInfo}>
             <Text style={styles.statusTitle}>
-              Your Assignment Progress
+              Weekly Schedule
             </Text>
 
             <Text style={styles.statusText}>
-              {assignments.length > 0
-                ? `${completedCount} of ${assignments.length} assignments completed`
-                : "No assignments available"}
+              {totalClasses} classes scheduled
+              this week.
             </Text>
           </View>
         </View>
@@ -642,23 +535,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
 
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: "#64748B",
-  },
-
   content: {
     padding: 24,
     paddingTop: 60,
     paddingBottom: 100,
+  },
+
+  loadingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 22,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  loadingText: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 8,
   },
 
   header: {
@@ -789,64 +684,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  assignmentOverview: {
-    marginTop: 16,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  assignmentOverviewLabel: {
-    fontSize: 13,
-    color: "#64748B",
-  },
-
-  assignmentOverviewNumber: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#10B981",
-    marginTop: 3,
-  },
-
-  assignmentOverviewText: {
-    fontSize: 12,
-    color: "#64748B",
-  },
-
-  assignmentOverviewRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  overviewItem: {
-    alignItems: "center",
-    minWidth: 55,
-  },
-
-  overviewNumber: {
-    fontSize: 21,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  overviewLabel: {
-    fontSize: 10,
-    color: "#64748B",
-    marginTop: 3,
-  },
-
-  overviewDivider: {
-    width: 1,
-    height: 35,
-    backgroundColor: "#E2E8F0",
-    marginHorizontal: 12,
-  },
-
   sectionHeader: {
     marginTop: 30,
     marginBottom: 14,
@@ -887,14 +724,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  urgentIconBox: {
-    backgroundColor: "#FFFBEB",
-  },
-
-  overdueIconBox: {
-    backgroundColor: "#FEF2F2",
-  },
-
   cardInfo: {
     flex: 1,
     marginLeft: 14,
@@ -914,17 +743,13 @@ const styles = StyleSheet.create({
 
   deadline: {
     fontSize: 12,
-    color: "#F59E0B",
-    marginTop: 6,
-    fontWeight: "700",
-  },
-
-  overdueDeadline: {
     color: "#EF4444",
+    marginTop: 6,
+    fontWeight: "600",
   },
 
-  normalDeadline: {
-    color: "#4F46E5",
+  classList: {
+    gap: 12,
   },
 
   classCard: {
@@ -966,27 +791,41 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  emptyCard: {
+  emptyClassCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 22,
+    padding: 18,
+    flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
 
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#111827",
-    marginTop: 8,
+  emptyClassIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  emptyText: {
+  emptyClassInfo: {
+    flex: 1,
+    marginLeft: 13,
+  },
+
+  emptyClassTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  emptyClassText: {
     fontSize: 12,
     color: "#64748B",
     marginTop: 4,
-    textAlign: "center",
+    lineHeight: 17,
   },
 
   statusCard: {

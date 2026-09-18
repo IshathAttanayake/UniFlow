@@ -34,11 +34,116 @@ type Assignment = {
   description?: string;
 };
 
+const parseAssignmentDate = (dateString: string) => {
+  const parsed = new Date(dateString);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  parsed.setHours(0, 0, 0, 0);
+
+  return parsed;
+};
+
+const getToday = () => {
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  return today;
+};
+
+const getDaysUntilDue = (dateString: string) => {
+  const dueDate = parseAssignmentDate(dateString);
+
+  if (!dueDate) {
+    return null;
+  }
+
+  const today = getToday();
+
+  const difference =
+    dueDate.getTime() - today.getTime();
+
+  return Math.ceil(
+    difference / (1000 * 60 * 60 * 24)
+  );
+};
+
+const getAssignmentStatus = (
+  assignment: Assignment
+): AssignmentStatus => {
+  if (
+    assignment.status === "completed" ||
+    assignment.progress >= 100
+  ) {
+    return "completed";
+  }
+
+  const daysUntilDue = getDaysUntilDue(
+    assignment.date
+  );
+
+  if (daysUntilDue === null) {
+    return assignment.status;
+  }
+
+  if (daysUntilDue < 0) {
+    return "overdue";
+  }
+
+  if (daysUntilDue <= 1) {
+    return "urgent";
+  }
+
+  return "upcoming";
+};
+
+const getAssignmentDueText = (
+  assignment: Assignment
+) => {
+  if (
+    assignment.status === "completed" ||
+    assignment.progress >= 100
+  ) {
+    return "Completed";
+  }
+
+  const daysUntilDue = getDaysUntilDue(
+    assignment.date
+  );
+
+  if (daysUntilDue === null) {
+    return assignment.due;
+  }
+
+  if (daysUntilDue < 0) {
+    const overdueDays = Math.abs(daysUntilDue);
+
+    return overdueDays === 1
+      ? "Overdue by 1 day"
+      : `Overdue by ${overdueDays} days`;
+  }
+
+  if (daysUntilDue === 0) {
+    return "Due today";
+  }
+
+  if (daysUntilDue === 1) {
+    return "Due tomorrow";
+  }
+
+  return `Due in ${daysUntilDue} days`;
+};
+
 export default function AssignmentDetailsScreen() {
   const params = useLocalSearchParams();
 
   const assignmentId =
-    typeof params.id === "string" ? params.id : "";
+    typeof params.id === "string"
+      ? params.id
+      : "";
 
   const [assignment, setAssignment] =
     useState<Assignment | null>(null);
@@ -51,14 +156,16 @@ export default function AssignmentDetailsScreen() {
     useState(false);
 
   const [progress, setProgress] = useState("0");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] =
+    useState("");
 
   // Assignment editing
   const [editingAssignment, setEditingAssignment] =
     useState(false);
 
   const [editTitle, setEditTitle] = useState("");
-  const [editCourse, setEditCourse] = useState("");
+  const [editCourse, setEditCourse] =
+    useState("");
   const [editDate, setEditDate] = useState("");
   const [editDescription, setEditDescription] =
     useState("");
@@ -67,7 +174,8 @@ export default function AssignmentDetailsScreen() {
   const [showDeleteModal, setShowDeleteModal] =
     useState(false);
 
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] =
+    useState(false);
 
   useEffect(() => {
     loadAssignment();
@@ -76,7 +184,9 @@ export default function AssignmentDetailsScreen() {
   const loadAssignment = async () => {
     try {
       const data =
-        await AsyncStorage.getItem(ASSIGNMENTS_KEY);
+        await AsyncStorage.getItem(
+          ASSIGNMENTS_KEY
+        );
 
       if (!data) {
         setLoading(false);
@@ -87,24 +197,62 @@ export default function AssignmentDetailsScreen() {
         JSON.parse(data);
 
       const found = assignments.find(
-        (item) => String(item.id) === String(assignmentId)
+        (item) =>
+          String(item.id) ===
+          String(assignmentId)
       );
 
       if (found) {
-        setAssignment(found);
+        const updatedStatus =
+          getAssignmentStatus(found);
 
-        setProgress(String(found.progress));
+        const updatedDue =
+          getAssignmentDueText(found);
+
+        const refreshedAssignment: Assignment = {
+          ...found,
+          status: updatedStatus,
+          due: updatedDue,
+        };
+
+        setAssignment(
+          refreshedAssignment
+        );
+
+        setProgress(
+          String(refreshedAssignment.progress)
+        );
 
         setDescription(
-          found.description || ""
+          refreshedAssignment.description || ""
         );
 
-        setEditTitle(found.title);
-        setEditCourse(found.course);
-        setEditDate(found.date);
-        setEditDescription(
-          found.description || ""
+        setEditTitle(
+          refreshedAssignment.title
         );
+
+        setEditCourse(
+          refreshedAssignment.course
+        );
+
+        setEditDate(
+          refreshedAssignment.date
+        );
+
+        setEditDescription(
+          refreshedAssignment.description || ""
+        );
+
+        // Keep automatic status in storage.
+        if (
+          updatedStatus !== found.status ||
+          updatedDue !== found.due
+        ) {
+          await saveAssignmentToStorage(
+            refreshedAssignment,
+            assignments
+          );
+        }
       }
     } catch (error) {
       console.log(
@@ -116,22 +264,26 @@ export default function AssignmentDetailsScreen() {
     }
   };
 
-  const saveAssignment = async (
-    updatedAssignment: Assignment
+  const saveAssignmentToStorage = async (
+    updatedAssignment: Assignment,
+    existingAssignments?: Assignment[]
   ) => {
     const data =
-      await AsyncStorage.getItem(ASSIGNMENTS_KEY);
+      await AsyncStorage.getItem(
+        ASSIGNMENTS_KEY
+      );
 
-    const assignments: Assignment[] = data
-      ? JSON.parse(data)
-      : [];
+    const assignments =
+      existingAssignments ||
+      (data ? JSON.parse(data) : []);
 
     const updatedAssignments =
-      assignments.map((item) =>
-        String(item.id) ===
-        String(updatedAssignment.id)
-          ? updatedAssignment
-          : item
+      assignments.map(
+        (item: Assignment) =>
+          String(item.id) ===
+          String(updatedAssignment.id)
+            ? updatedAssignment
+            : item
       );
 
     await AsyncStorage.setItem(
@@ -140,6 +292,14 @@ export default function AssignmentDetailsScreen() {
     );
 
     setAssignment(updatedAssignment);
+  };
+
+  const saveAssignment = async (
+    updatedAssignment: Assignment
+  ) => {
+    await saveAssignmentToStorage(
+      updatedAssignment
+    );
   };
 
   // ------------------------------------------------
@@ -185,10 +345,14 @@ export default function AssignmentDetailsScreen() {
       return;
     }
 
+    if (!parseAssignmentDate(date)) {
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const updatedAssignment: Assignment = {
+      const updatedAssignmentBase: Assignment = {
         ...assignment,
         title,
         course,
@@ -196,7 +360,19 @@ export default function AssignmentDetailsScreen() {
         description: newDescription,
       };
 
-      await saveAssignment(updatedAssignment);
+      const updatedAssignment: Assignment = {
+        ...updatedAssignmentBase,
+        status: getAssignmentStatus(
+          updatedAssignmentBase
+        ),
+        due: getAssignmentDueText(
+          updatedAssignmentBase
+        ),
+      };
+
+      await saveAssignment(
+        updatedAssignment
+      );
 
       setDescription(newDescription);
 
@@ -222,9 +398,12 @@ export default function AssignmentDetailsScreen() {
   const handleSaveProgress = async () => {
     if (!assignment) return;
 
-    let numericProgress = Number(progress);
+    let numericProgress =
+      Number(progress);
 
-    if (Number.isNaN(numericProgress)) {
+    if (
+      Number.isNaN(numericProgress)
+    ) {
       return;
     }
 
@@ -236,22 +415,34 @@ export default function AssignmentDetailsScreen() {
     setSaving(true);
 
     try {
-      const updatedAssignment: Assignment = {
+      const updatedAssignmentBase: Assignment = {
         ...assignment,
 
         progress: numericProgress,
 
-        description: description.trim(),
+        description:
+          description.trim(),
+      };
 
+      const updatedAssignment: Assignment = {
+        ...updatedAssignmentBase,
         status:
           numericProgress >= 100
             ? "completed"
-            : assignment.status === "completed"
-              ? "upcoming"
-              : assignment.status,
+            : getAssignmentStatus(
+                updatedAssignmentBase
+              ),
+        due:
+          numericProgress >= 100
+            ? "Completed"
+            : getAssignmentDueText(
+                updatedAssignmentBase
+              ),
       };
 
-      await saveAssignment(updatedAssignment);
+      await saveAssignment(
+        updatedAssignment
+      );
 
       setProgress(
         String(numericProgress)
@@ -272,37 +463,44 @@ export default function AssignmentDetailsScreen() {
   // Mark Completed
   // ------------------------------------------------
 
-  const handleMarkCompleted = async () => {
-    if (!assignment) return;
+  const handleMarkCompleted =
+    async () => {
+      if (!assignment) return;
 
-    setSaving(true);
+      setSaving(true);
 
-    try {
-      const updatedAssignment: Assignment = {
-        ...assignment,
-        progress: 100,
-        status: "completed",
-      };
+      try {
+        const updatedAssignment: Assignment = {
+          ...assignment,
+          progress: 100,
+          status: "completed",
+          due: "Completed",
+        };
 
-      await saveAssignment(updatedAssignment);
+        await saveAssignment(
+          updatedAssignment
+        );
 
-      setProgress("100");
-    } catch (error) {
-      console.log(
-        "Error completing assignment:",
-        error
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+        setProgress("100");
+      } catch (error) {
+        console.log(
+          "Error completing assignment:",
+          error
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
   // ------------------------------------------------
   // Delete
   // ------------------------------------------------
 
   const handleDelete = async () => {
-    if (!assignment || isDeleting) {
+    if (
+      !assignment ||
+      isDeleting
+    ) {
       return;
     }
 
@@ -359,7 +557,9 @@ export default function AssignmentDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View
+        style={styles.loadingContainer}
+      >
         <ActivityIndicator
           size="large"
           color="#4F46E5"
@@ -378,7 +578,9 @@ export default function AssignmentDetailsScreen() {
 
   if (!assignment) {
     return (
-      <View style={styles.emptyContainer}>
+      <View
+        style={styles.emptyContainer}
+      >
         <View style={styles.emptyIcon}>
           <Ionicons
             name="document-text-outline"
@@ -392,7 +594,8 @@ export default function AssignmentDetailsScreen() {
         </Text>
 
         <Text style={styles.emptyText}>
-          This assignment may have been deleted.
+          This assignment may have been
+          deleted.
         </Text>
 
         <TouchableOpacity
@@ -408,9 +611,25 @@ export default function AssignmentDetailsScreen() {
     );
   }
 
+  const currentStatus =
+    getAssignmentStatus(
+      assignment
+    );
+
+  const currentDue =
+    getAssignmentDueText(
+      assignment
+    );
+
   const isCompleted =
-    assignment.status === "completed" ||
+    currentStatus === "completed" ||
     assignment.progress >= 100;
+
+  const isOverdue =
+    currentStatus === "overdue";
+
+  const isUrgent =
+    currentStatus === "urgent";
 
   // ------------------------------------------------
   // Main Screen
@@ -428,7 +647,9 @@ export default function AssignmentDetailsScreen() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={
+            styles.content
+          }
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
@@ -446,11 +667,15 @@ export default function AssignmentDetailsScreen() {
               />
             </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>
+            <Text
+              style={styles.headerTitle}
+            >
               Assignment Details
             </Text>
 
-            <View style={styles.headerSpacer} />
+            <View
+              style={styles.headerSpacer}
+            />
           </View>
 
           {/* Hero */}
@@ -461,20 +686,30 @@ export default function AssignmentDetailsScreen() {
                 styles.heroIcon,
                 isCompleted
                   ? styles.completedHeroIcon
-                  : styles.normalHeroIcon,
+                  : isOverdue
+                    ? styles.overdueHeroIcon
+                    : isUrgent
+                      ? styles.urgentHeroIcon
+                      : styles.normalHeroIcon,
               ]}
             >
               <Ionicons
                 name={
                   isCompleted
                     ? "checkmark-circle"
-                    : "document-text-outline"
+                    : isOverdue
+                      ? "alert-circle"
+                      : "document-text-outline"
                 }
                 size={30}
                 color={
                   isCompleted
                     ? "#10B981"
-                    : "#4F46E5"
+                    : isOverdue
+                      ? "#EF4444"
+                      : isUrgent
+                        ? "#F59E0B"
+                        : "#4F46E5"
                 }
               />
             </View>
@@ -492,20 +727,32 @@ export default function AssignmentDetailsScreen() {
                 styles.statusBadge,
                 isCompleted
                   ? styles.completedBadge
-                  : styles.pendingBadge,
+                  : isOverdue
+                    ? styles.overdueBadge
+                    : isUrgent
+                      ? styles.urgentBadge
+                      : styles.pendingBadge,
               ]}
             >
               <Ionicons
                 name={
                   isCompleted
                     ? "checkmark-circle-outline"
-                    : "time-outline"
+                    : isOverdue
+                      ? "alert-circle-outline"
+                      : isUrgent
+                        ? "time-outline"
+                        : "time-outline"
                 }
                 size={15}
                 color={
                   isCompleted
                     ? "#047857"
-                    : "#4F46E5"
+                    : isOverdue
+                      ? "#DC2626"
+                      : isUrgent
+                        ? "#D97706"
+                        : "#4F46E5"
                 }
               />
 
@@ -514,20 +761,28 @@ export default function AssignmentDetailsScreen() {
                   styles.statusText,
                   isCompleted
                     ? styles.completedStatusText
-                    : styles.pendingStatusText,
+                    : isOverdue
+                      ? styles.overdueStatusText
+                      : isUrgent
+                        ? styles.urgentStatusText
+                        : styles.pendingStatusText,
                 ]}
               >
                 {isCompleted
                   ? "Completed"
-                  : assignment.due}
+                  : currentDue}
               </Text>
             </View>
           </View>
 
           {/* Assignment Information */}
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
+          <View
+            style={styles.sectionHeader}
+          >
+            <Text
+              style={styles.sectionTitle}
+            >
               Assignment Information
             </Text>
 
@@ -538,7 +793,9 @@ export default function AssignmentDetailsScreen() {
                 }
                 activeOpacity={0.7}
               >
-                <Text style={styles.editText}>
+                <Text
+                  style={styles.editText}
+                >
                   Edit
                 </Text>
               </TouchableOpacity>
@@ -547,48 +804,73 @@ export default function AssignmentDetailsScreen() {
 
           {editingAssignment ? (
             <View style={styles.editCard}>
-              <Text style={styles.inputLabel}>
+              <Text
+                style={styles.inputLabel}
+              >
                 Assignment Title
               </Text>
 
               <TextInput
                 style={styles.textInput}
                 value={editTitle}
-                onChangeText={setEditTitle}
+                onChangeText={
+                  setEditTitle
+                }
                 placeholder="Assignment title"
                 placeholderTextColor="#94A3B8"
               />
 
-              <Text style={styles.inputLabel}>
+              <Text
+                style={styles.inputLabel}
+              >
                 Course
               </Text>
 
               <TextInput
                 style={styles.textInput}
                 value={editCourse}
-                onChangeText={setEditCourse}
+                onChangeText={
+                  setEditCourse
+                }
                 placeholder="Course name"
                 placeholderTextColor="#94A3B8"
               />
 
-              <Text style={styles.inputLabel}>
+              <Text
+                style={styles.inputLabel}
+              >
                 Due Date
               </Text>
 
               <TextInput
                 style={styles.textInput}
                 value={editDate}
-                onChangeText={setEditDate}
-                placeholder="Example: Sep 25, 2026"
+                onChangeText={
+                  setEditDate
+                }
+                placeholder="Example: Aug 30, 2026"
                 placeholderTextColor="#94A3B8"
+                autoCapitalize="words"
               />
 
-              <Text style={styles.inputLabel}>
+              <Text
+                style={styles.dateHint}
+              >
+                Use a valid date such as:
+                {" "}
+                Aug 30, 2026
+              </Text>
+
+              <Text
+                style={styles.inputLabel}
+              >
                 Description
               </Text>
 
               <TextInput
-                style={styles.descriptionInput}
+                style={
+                  styles.descriptionInput
+                }
                 value={editDescription}
                 onChangeText={
                   setEditDescription
@@ -599,9 +881,13 @@ export default function AssignmentDetailsScreen() {
                 textAlignVertical="top"
               />
 
-              <View style={styles.editButtons}>
+              <View
+                style={styles.editButtons}
+              >
                 <TouchableOpacity
-                  style={styles.cancelEditButton}
+                  style={
+                    styles.cancelEditButton
+                  }
                   activeOpacity={0.8}
                   onPress={
                     cancelAssignmentEditing
@@ -609,7 +895,9 @@ export default function AssignmentDetailsScreen() {
                   disabled={saving}
                 >
                   <Text
-                    style={styles.cancelEditText}
+                    style={
+                      styles.cancelEditText
+                    }
                   >
                     Cancel
                   </Text>
@@ -653,19 +941,23 @@ export default function AssignmentDetailsScreen() {
               <InfoRow
                 icon="book-outline"
                 label="Course"
-                value={assignment.course}
+                value={
+                  assignment.course
+                }
               />
 
               <InfoRow
                 icon="calendar-outline"
                 label="Due Date"
-                value={assignment.date}
+                value={
+                  assignment.date
+                }
               />
 
               <InfoRow
                 icon="time-outline"
                 label="Deadline"
-                value={assignment.due}
+                value={currentDue}
                 last
               />
             </View>
@@ -673,8 +965,12 @@ export default function AssignmentDetailsScreen() {
 
           {/* Progress */}
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
+          <View
+            style={styles.sectionHeader}
+          >
+            <Text
+              style={styles.sectionTitle}
+            >
               Progress
             </Text>
 
@@ -682,30 +978,46 @@ export default function AssignmentDetailsScreen() {
               !editingAssignment && (
                 <TouchableOpacity
                   onPress={() =>
-                    setEditingProgress(true)
+                    setEditingProgress(
+                      true
+                    )
                   }
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.editText}>
+                  <Text
+                    style={
+                      styles.editText
+                    }
+                  >
                     Edit
                   </Text>
                 </TouchableOpacity>
               )}
           </View>
 
-          <View style={styles.progressCard}>
-            <View style={styles.progressTop}>
-              <Text style={styles.progressLabel}>
+          <View
+            style={styles.progressCard}
+          >
+            <View
+              style={styles.progressTop}
+            >
+              <Text
+                style={styles.progressLabel}
+              >
                 Completion
               </Text>
 
-              <Text style={styles.progressValue}>
+              <Text
+                style={styles.progressValue}
+              >
                 {assignment.progress}%
               </Text>
             </View>
 
             <View
-              style={styles.progressBackground}
+              style={
+                styles.progressBackground
+              }
             >
               <View
                 style={[
@@ -722,7 +1034,9 @@ export default function AssignmentDetailsScreen() {
 
             {editingProgress ? (
               <>
-                <Text style={styles.inputLabel}>
+                <Text
+                  style={styles.inputLabel}
+                >
                   Progress Percentage
                 </Text>
 
@@ -732,7 +1046,9 @@ export default function AssignmentDetailsScreen() {
                   }
                 >
                   <TextInput
-                    style={styles.progressInput}
+                    style={
+                      styles.progressInput
+                    }
                     value={progress}
                     onChangeText={
                       setProgress
@@ -744,18 +1060,24 @@ export default function AssignmentDetailsScreen() {
                   />
 
                   <Text
-                    style={styles.percentText}
+                    style={
+                      styles.percentText
+                    }
                   >
                     %
                   </Text>
                 </View>
 
-                <Text style={styles.inputLabel}>
+                <Text
+                  style={styles.inputLabel}
+                >
                   Description
                 </Text>
 
                 <TextInput
-                  style={styles.descriptionInput}
+                  style={
+                    styles.descriptionInput
+                  }
                   value={description}
                   onChangeText={
                     setDescription
@@ -766,7 +1088,11 @@ export default function AssignmentDetailsScreen() {
                   textAlignVertical="top"
                 />
 
-                <View style={styles.editButtons}>
+                <View
+                  style={
+                    styles.editButtons
+                  }
+                >
                   <TouchableOpacity
                     style={
                       styles.cancelEditButton
@@ -800,7 +1126,9 @@ export default function AssignmentDetailsScreen() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.saveButton}
+                    style={
+                      styles.saveButton
+                    }
                     activeOpacity={0.8}
                     onPress={
                       handleSaveProgress
@@ -834,7 +1162,9 @@ export default function AssignmentDetailsScreen() {
               </>
             ) : (
               <Text
-                style={styles.progressHint}
+                style={
+                  styles.progressHint
+                }
               >
                 {isCompleted
                   ? "You have completed this assignment."
@@ -848,16 +1178,21 @@ export default function AssignmentDetailsScreen() {
           {!editingAssignment &&
             !editingProgress &&
             assignment.description &&
-            assignment.description.trim() !== "" && (
+            assignment.description.trim() !==
+              "" && (
               <>
                 <Text
-                  style={styles.sectionTitle}
+                  style={
+                    styles.sectionTitle
+                  }
                 >
                   Description
                 </Text>
 
                 <View
-                  style={styles.descriptionCard}
+                  style={
+                    styles.descriptionCard
+                  }
                 >
                   <Ionicons
                     name="information-circle-outline"
@@ -866,7 +1201,9 @@ export default function AssignmentDetailsScreen() {
                   />
 
                   <Text
-                    style={styles.descriptionText}
+                    style={
+                      styles.descriptionText
+                    }
                   >
                     {assignment.description}
                   </Text>
@@ -880,7 +1217,9 @@ export default function AssignmentDetailsScreen() {
             !editingAssignment &&
             !editingProgress && (
               <TouchableOpacity
-                style={styles.completeButton}
+                style={
+                  styles.completeButton
+                }
                 activeOpacity={0.85}
                 onPress={
                   handleMarkCompleted
@@ -888,7 +1227,9 @@ export default function AssignmentDetailsScreen() {
                 disabled={saving}
               >
                 <View
-                  style={styles.completeIcon}
+                  style={
+                    styles.completeIcon
+                  }
                 >
                   <Ionicons
                     name="checkmark"
@@ -898,7 +1239,9 @@ export default function AssignmentDetailsScreen() {
                 </View>
 
                 <Text
-                  style={styles.completeText}
+                  style={
+                    styles.completeText
+                  }
                 >
                   Mark as Completed
                 </Text>
@@ -911,10 +1254,14 @@ export default function AssignmentDetailsScreen() {
             !editingAssignment &&
             !editingProgress && (
               <View
-                style={styles.completedCard}
+                style={
+                  styles.completedCard
+                }
               >
                 <View
-                  style={styles.completedIcon}
+                  style={
+                    styles.completedIcon
+                  }
                 >
                   <Ionicons
                     name="checkmark-circle"
@@ -924,7 +1271,9 @@ export default function AssignmentDetailsScreen() {
                 </View>
 
                 <View
-                  style={styles.completedInfo}
+                  style={
+                    styles.completedInfo
+                  }
                 >
                   <Text
                     style={
@@ -956,7 +1305,9 @@ export default function AssignmentDetailsScreen() {
                 }
                 activeOpacity={0.8}
                 onPress={() =>
-                  setShowDeleteModal(true)
+                  setShowDeleteModal(
+                    true
+                  )
                 }
                 disabled={isDeleting}
               >
@@ -967,7 +1318,9 @@ export default function AssignmentDetailsScreen() {
                 />
 
                 <Text
-                  style={styles.deleteFullText}
+                  style={
+                    styles.deleteFullText
+                  }
                 >
                   Delete Assignment
                 </Text>
@@ -984,13 +1337,27 @@ export default function AssignmentDetailsScreen() {
         animationType="fade"
         onRequestClose={() => {
           if (!isDeleting) {
-            setShowDeleteModal(false);
+            setShowDeleteModal(
+              false
+            );
           }
         }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIcon}>
+        <View
+          style={
+            styles.modalOverlay
+          }
+        >
+          <View
+            style={
+              styles.modalCard
+            }
+          >
+            <View
+              style={
+                styles.modalIcon
+              }
+            >
               <Ionicons
                 name="trash-outline"
                 size={28}
@@ -998,22 +1365,38 @@ export default function AssignmentDetailsScreen() {
               />
             </View>
 
-            <Text style={styles.modalTitle}>
+            <Text
+              style={
+                styles.modalTitle
+              }
+            >
               Delete Assignment?
             </Text>
 
-            <Text style={styles.modalMessage}>
+            <Text
+              style={
+                styles.modalMessage
+              }
+            >
               This will permanently remove "
               {assignment.title}" from your
               assignments.
             </Text>
 
-            <View style={styles.modalButtons}>
+            <View
+              style={
+                styles.modalButtons
+              }
+            >
               <TouchableOpacity
-                style={styles.cancelModalButton}
+                style={
+                  styles.cancelModalButton
+                }
                 activeOpacity={0.8}
                 onPress={() =>
-                  setShowDeleteModal(false)
+                  setShowDeleteModal(
+                    false
+                  )
                 }
                 disabled={isDeleting}
               >
@@ -1027,7 +1410,9 @@ export default function AssignmentDetailsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.confirmDeleteButton}
+                style={
+                  styles.confirmDeleteButton
+                }
                 activeOpacity={0.8}
                 onPress={handleDelete}
                 disabled={isDeleting}
@@ -1081,7 +1466,9 @@ function InfoRow({
         last && styles.lastRow,
       ]}
     >
-      <View style={styles.infoIcon}>
+      <View
+        style={styles.infoIcon}
+      >
         <Ionicons
           name={icon}
           size={20}
@@ -1089,12 +1476,18 @@ function InfoRow({
         />
       </View>
 
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabel}>
+      <View
+        style={styles.infoContent}
+      >
+        <Text
+          style={styles.infoLabel}
+        >
           {label}
         </Text>
 
-        <Text style={styles.infoValue}>
+        <Text
+          style={styles.infoValue}
+        >
           {value}
         </Text>
       </View>
@@ -1223,6 +1616,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#EEF2FF",
   },
 
+  urgentHeroIcon: {
+    backgroundColor: "#FEF3C7",
+  },
+
+  overdueHeroIcon: {
+    backgroundColor: "#FEF2F2",
+  },
+
   completedHeroIcon: {
     backgroundColor: "#D1FAE5",
   },
@@ -1255,6 +1656,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#EEF2FF",
   },
 
+  urgentBadge: {
+    backgroundColor: "#FEF3C7",
+  },
+
+  overdueBadge: {
+    backgroundColor: "#FEF2F2",
+  },
+
   completedBadge: {
     backgroundColor: "#D1FAE5",
   },
@@ -1266,6 +1675,14 @@ const styles = StyleSheet.create({
 
   pendingStatusText: {
     color: "#4F46E5",
+  },
+
+  urgentStatusText: {
+    color: "#D97706",
+  },
+
+  overdueStatusText: {
+    color: "#DC2626",
   },
 
   completedStatusText: {
@@ -1364,6 +1781,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     backgroundColor: "#FFFFFF",
+  },
+
+  dateHint: {
+    fontSize: 11,
+    color: "#94A3B8",
+    marginTop: 6,
   },
 
   progressCard: {

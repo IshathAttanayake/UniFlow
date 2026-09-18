@@ -26,14 +26,18 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="courses"
-        options={{
-          title: "Courses",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" size={size} color={color} />
-          ),
-        }}
+  name="grades"
+  options={{
+    title: "Grades",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons
+        name="school-outline"
+        size={size}
+        color={color}
       />
+    ),
+  }}
+/>
 
       <Tabs.Screen
         name="assignments"

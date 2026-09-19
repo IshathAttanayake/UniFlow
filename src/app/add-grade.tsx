@@ -3,15 +3,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const GRADES_KEY = "@uniflow_grades";
@@ -31,10 +31,16 @@ export default function AddGradeScreen() {
   const [marks, setMarks] = useState("");
   const [maxMarks, setMaxMarks] = useState("100");
   const [showCourses, setShowCourses] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    if (saving) return;
+
     if (!assessment.trim()) {
-      Alert.alert("Missing Information", "Please enter the assessment name.");
+      Alert.alert(
+        "Missing Information",
+        "Please enter the assessment name.",
+      );
       return;
     }
 
@@ -47,7 +53,10 @@ export default function AddGradeScreen() {
       Number.isNaN(obtained) ||
       Number.isNaN(maximum)
     ) {
-      Alert.alert("Invalid Marks", "Please enter valid marks.");
+      Alert.alert(
+        "Invalid Marks",
+        "Please enter valid marks.",
+      );
       return;
     }
 
@@ -68,19 +77,36 @@ export default function AddGradeScreen() {
     }
 
     try {
-      const existingData = await AsyncStorage.getItem(GRADES_KEY);
+      setSaving(true);
 
-      const existingGrades = existingData
-        ? JSON.parse(existingData)
-        : [];
+      const storedData =
+        await AsyncStorage.getItem(GRADES_KEY);
+
+      let existingGrades: any[] = [];
+
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+
+          if (Array.isArray(parsed)) {
+            existingGrades = parsed;
+          }
+        } catch {
+          existingGrades = [];
+        }
+      }
+
+      const percentage = Math.round(
+        (obtained / maximum) * 100,
+      );
 
       const newGrade = {
         id: Date.now().toString(),
-        course,
+        course: course,
         assessment: assessment.trim(),
         marks: obtained,
         maxMarks: maximum,
-        percentage: Math.round((obtained / maximum) * 100),
+        percentage: percentage,
       };
 
       const updatedGrades = [
@@ -93,28 +119,62 @@ export default function AddGradeScreen() {
         JSON.stringify(updatedGrades),
       );
 
-      Alert.alert(
-        "Grade Added",
-        "Your assessment has been saved successfully.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ],
-      );
+      // Verify that the data was actually saved.
+      const savedData =
+        await AsyncStorage.getItem(GRADES_KEY);
+
+      if (!savedData) {
+        throw new Error("Grade was not saved.");
+      }
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "Grade added successfully!",
+        );
+
+        router.replace("/(tabs)/grades");
+      } else {
+        Alert.alert(
+          "Grade Added",
+          "Your assessment has been saved successfully.",
+          [
+            {
+              text: "OK",
+              onPress: () =>
+                router.replace("/(tabs)/grades"),
+            },
+          ],
+        );
+      }
     } catch (error) {
-      Alert.alert(
-        "Error",
-        "Unable to save the grade. Please try again.",
+      console.error(
+        "Save grade error:",
+        error,
       );
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "Unable to save the grade. Please try again.",
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          "Unable to save the grade. Please try again.",
+        );
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -199,7 +259,6 @@ export default function AddGradeScreen() {
           />
         </TouchableOpacity>
 
-        {/* Course List */}
         {showCourses && (
           <View style={styles.courseList}>
             {courses.map((item) => (
@@ -308,7 +367,9 @@ export default function AddGradeScreen() {
             </Text>
 
             <Text style={styles.previewValue}>
-              {marks && maxMarks
+              {marks &&
+              maxMarks &&
+              Number(maxMarks) > 0
                 ? `${Math.round(
                     (Number(marks) /
                       Number(maxMarks)) *
@@ -329,18 +390,28 @@ export default function AddGradeScreen() {
 
         {/* Save */}
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[
+            styles.saveButton,
+            saving && styles.saveButtonDisabled,
+          ]}
           activeOpacity={0.85}
           onPress={handleSave}
+          disabled={saving}
         >
           <Ionicons
-            name="checkmark-circle-outline"
+            name={
+              saving
+                ? "hourglass-outline"
+                : "checkmark-circle-outline"
+            }
             size={21}
             color="#FFFFFF"
           />
 
           <Text style={styles.saveText}>
-            Save Grade
+            {saving
+              ? "Saving..."
+              : "Save Grade"}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -587,6 +658,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
 
   saveText: {

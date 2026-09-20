@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,171 +11,131 @@ import {
   View,
 } from "react-native";
 
-import { getUser, User } from "../../utils/auth";
+const GRADES_KEY = "@uniflow_grades";
 
-type ClassItem = {
-  id?: string;
-  time: string;
-  period: string;
-  subject: string;
-  lecturer: string;
-  location: string;
-  type: string;
+type SavedGrade = {
+  id: string;
+  course: string;
+  assessment: string;
+  marks: number;
+  maxMarks: number;
+  percentage: number;
 };
 
-type Schedule = Record<string, ClassItem[]>;
+const normalizeCourseName = (value: string) => {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/systems$/, "system");
+};
 
-const SCHEDULE_KEY = "@uniflow_schedule";
+const getLetterGrade = (percentage: number) => {
+  if (percentage >= 85) return "A";
+  if (percentage >= 70) return "B";
+  if (percentage >= 55) return "C";
+  if (percentage >= 40) return "D";
+  return "F";
+};
 
-const defaultSchedule: Schedule = {
-  Monday: [
-    {
-      time: "09:00",
-      period: "AM",
-      subject: "Software Engineering",
-      lecturer: "Dr. Kasun Perera",
-      location: "Lecture Hall A",
-      type: "Lecture",
-    },
-    {
-      time: "11:00",
-      period: "AM",
-      subject: "Database Management Systems",
-      lecturer: "Ms. Nadeesha Silva",
-      location: "Lab 02",
-      type: "Lab",
-    },
-  ],
+const getGPAValue = (percentage: number) => {
+  if (percentage >= 85) return 4.0;
+  if (percentage >= 70) return 3.0;
+  if (percentage >= 55) return 2.0;
+  if (percentage >= 40) return 1.0;
+  return 0.0;
+};
 
-  Tuesday: [
-    {
-      time: "09:00",
-      period: "AM",
-      subject: "Computer Networks",
-      lecturer: "Mr. Dilan Perera",
-      location: "Lab 03",
-      type: "Lab",
-    },
-  ],
-
-  Wednesday: [
-    {
-      time: "10:00",
-      period: "AM",
-      subject: "Database Management Systems",
-      lecturer: "Ms. Nadeesha Silva",
-      location: "Lecture Hall A",
-      type: "Lecture",
-    },
-  ],
-
-  Thursday: [
-    {
-      time: "09:00",
-      period: "AM",
-      subject: "Data Structures & Algorithms",
-      lecturer: "Mr. Chamara Jayasinghe",
-      location: "Lecture Hall A",
-      type: "Lecture",
-    },
-  ],
-
-  Friday: [
-    {
-      time: "09:00",
-      period: "AM",
-      subject: "Object Oriented Programming",
-      lecturer: "Mr. Tharindu Fernando",
-      location: "Lecture Hall A",
-      type: "Lecture",
-    },
-  ],
+const getGPAStatus = (gpa: number) => {
+  if (gpa >= 3.5) return "Excellent";
+  if (gpa >= 3.0) return "Good";
+  if (gpa >= 2.0) return "Average";
+  if (gpa >= 1.0) return "Needs Improvement";
+  return "No GPA";
 };
 
 export default function DashboardScreen() {
-  const [schedule, setSchedule] =
-    useState<Schedule>(defaultSchedule);
-
-  const [loadingSchedule, setLoadingSchedule] =
-    useState(true);
+  const [gpa, setGpa] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      loadSchedule();
-    }, [])
+      loadGPA();
+    }, []),
   );
-  const [user, setUser] = useState<User | null>(null);
-const [loadingUser, setLoadingUser] = useState(true);
 
-const loadUser = useCallback(async () => {
-  try {
-    const savedUser = await getUser();
-    setUser(savedUser);
-  } catch (error) {
-    console.log("Error loading user:", error);
-  } finally {
-    setLoadingUser(false);
-  }
-}, []);
-
-useFocusEffect(
-  useCallback(() => {
-    loadUser();
-  }, [loadUser])
-);
-
-  const loadSchedule = async () => {
+  const loadGPA = async () => {
     try {
-      const saved = await AsyncStorage.getItem(
-        SCHEDULE_KEY
-      );
+      const saved = await AsyncStorage.getItem(GRADES_KEY);
 
-      if (saved) {
-        const parsed: Schedule = JSON.parse(saved);
-        setSchedule(parsed);
-      } else {
-        await AsyncStorage.setItem(
-          SCHEDULE_KEY,
-          JSON.stringify(defaultSchedule)
+      if (!saved) {
+        setGpa(null);
+        return;
+      }
+
+      const parsed = JSON.parse(saved);
+
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        setGpa(null);
+        return;
+      }
+
+      const grades: SavedGrade[] = parsed;
+
+      const courseNames = [
+        "Database Management Systems",
+        "Object Oriented Programming",
+        "Software Engineering",
+        "Data Structures & Algorithms",
+        "Operating Systems",
+        "Computer Networks",
+      ];
+
+      const courseGPAs: number[] = [];
+
+      courseNames.forEach((courseName) => {
+        const courseGrades = grades.filter(
+          (grade) =>
+            normalizeCourseName(grade.course) ===
+            normalizeCourseName(courseName),
         );
 
-        setSchedule(defaultSchedule);
-      }
-    } catch (error) {
-      console.log(
-        "Dashboard schedule load error:",
-        error
-      );
+        if (courseGrades.length === 0) return;
 
-      setSchedule(defaultSchedule);
-    } finally {
-      setLoadingSchedule(false);
+        const totalMarks = courseGrades.reduce(
+          (sum, grade) => sum + Number(grade.marks),
+          0,
+        );
+
+        const totalMaxMarks = courseGrades.reduce(
+          (sum, grade) => sum + Number(grade.maxMarks),
+          0,
+        );
+
+        if (totalMaxMarks <= 0) return;
+
+        const percentage = (totalMarks / totalMaxMarks) * 100;
+
+        courseGPAs.push(getGPAValue(percentage));
+      });
+
+      if (courseGPAs.length === 0) {
+        setGpa(null);
+        return;
+      }
+
+      const overallGPA =
+        courseGPAs.reduce((sum, value) => sum + value, 0) /
+        courseGPAs.length;
+
+      setGpa(Number(overallGPA.toFixed(2)));
+    } catch (error) {
+      console.log("Dashboard GPA error:", error);
+      setGpa(null);
     }
   };
 
-  // Get today's day name.
-  const today = new Date().toLocaleDateString(
-    "en-US",
-    {
-      weekday: "long",
-    }
-  );
-
-  const todaysClasses =
-    schedule[today] || [];
-
-  // Show the next 2 classes on Dashboard.
-  const dashboardClasses =
-    todaysClasses.slice(0, 2);
-
-  // Count all classes in the weekly schedule.
-  const totalClasses = Object.values(
-    schedule
-  ).reduce(
-    (total, dayClasses) =>
-      total + dayClasses.length,
-    0
-  );
+  const displayGPA = gpa !== null ? gpa.toFixed(2) : "--";
+  const gpaStatus = gpa !== null ? getGPAStatus(gpa) : "No grades yet";
 
   return (
     <View style={styles.container}>
@@ -189,27 +148,15 @@ useFocusEffect(
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>
-              Good morning 👋
-            </Text>
-
-            {loadingUser ? (
-  <ActivityIndicator color="#4F46E5" />
-) : (
-  <Text style={styles.name}>
-    {user?.name || "Student"}
-  </Text>
-)}
+            <Text style={styles.greeting}>Good morning 👋</Text>
+            <Text style={styles.name}>Ishath</Text>
           </View>
 
           <View style={styles.headerRight}>
-            {/* Notifications */}
             <TouchableOpacity
               style={styles.notificationButton}
               activeOpacity={0.8}
-              onPress={() =>
-                router.push("/notifications")
-              }
+              onPress={() => router.push("/notifications")}
             >
               <Ionicons
                 name="notifications-outline"
@@ -220,139 +167,94 @@ useFocusEffect(
               <View style={styles.notificationDot} />
             </TouchableOpacity>
 
-            {/* Profile */}
             <TouchableOpacity
               style={styles.profile}
               activeOpacity={0.8}
-              onPress={() =>
-                router.push(
-                  "/(tabs)/profile"
-                )
-              }
+              onPress={() => router.push("/(tabs)/profile")}
             >
-              {loadingUser ? (
-  <ActivityIndicator color="#FFFFFF" />
-) : (
-  <Text style={styles.profileText}>
-    {user?.name?.trim().charAt(0).toUpperCase() || "U"}
-  </Text>
-)}
+              <Text style={styles.profileText}>I</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <Text style={styles.subtitle}>
-          Here's what's happening with your
-          studies today.
+          Here's what's happening with your studies today.
         </Text>
 
         {/* Quick Stats */}
         <View style={styles.statsRow}>
-          {/* Modules */}
           <TouchableOpacity
             style={styles.statCard}
             activeOpacity={0.8}
-            onPress={() =>
-              router.push(
-                "/(tabs)/courses"
-              )
-            }
+            onPress={() => router.push("/(tabs)/courses")}
           >
-            <Text style={styles.statNumber}>
-              6
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Modules
-            </Text>
+            <Text style={styles.statNumber}>6</Text>
+            <Text style={styles.statLabel}>Modules</Text>
           </TouchableOpacity>
 
-          {/* Assignments */}
           <TouchableOpacity
             style={styles.statCard}
             activeOpacity={0.8}
-            onPress={() =>
-              router.push(
-                "/(tabs)/assignments"
-              )
-            }
+            onPress={() => router.push("/(tabs)/assignments")}
           >
-            <Text style={styles.statNumber}>
-              3
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Assignments
-            </Text>
+            <Text style={styles.statNumber}>3</Text>
+            <Text style={styles.statLabel}>Assignments</Text>
           </TouchableOpacity>
 
-          {/* Classes */}
           <TouchableOpacity
             style={styles.statCard}
             activeOpacity={0.8}
-            onPress={() =>
-              router.push(
-                "/(tabs)/schedule"
-              )
-            }
+            onPress={() => router.push("/(tabs)/schedule")}
           >
-            <Text style={styles.statNumber}>
-              {totalClasses}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Classes
-            </Text>
+            <Text style={styles.statNumber}>2</Text>
+            <Text style={styles.statLabel}>Classes</Text>
           </TouchableOpacity>
         </View>
 
-        {/* GPA Card */}
+        {/* Dynamic GPA */}
         <View style={styles.gpaCard}>
           <View>
-            <Text style={styles.gpaLabel}>
-              Current GPA
-            </Text>
+            <Text style={styles.gpaLabel}>Current GPA</Text>
 
-            <Text style={styles.gpaValue}>
-              3.42
+            <Text style={styles.gpaValue}>{displayGPA}</Text>
+
+            <Text style={styles.gpaSubtext}>
+              {gpa !== null
+                ? "Calculated from your saved grades"
+                : "Add grades to calculate GPA"}
             </Text>
           </View>
 
           <View style={styles.gpaBadge}>
-            <Text style={styles.gpaBadgeText}>
-              Good
-            </Text>
+            <Text style={styles.gpaBadgeText}>{gpaStatus}</Text>
           </View>
         </View>
 
-        {/* Upcoming Assignments */}
+        {/* Upcoming */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Upcoming
-          </Text>
+          <Text style={styles.sectionTitle}>Upcoming</Text>
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() =>
-              router.push(
-                "/(tabs)/assignments"
-              )
-            }
+            onPress={() => router.push("/(tabs)/assignments")}
           >
-            <Text style={styles.seeAll}>
-              See all
-            </Text>
+            <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Keep your existing assignment cards here */}
+        {/* Assignment 1 */}
         <TouchableOpacity
           style={styles.assignmentCard}
           activeOpacity={0.8}
           onPress={() =>
-            router.push(
-              "/(tabs)/assignments"
-            )
+            router.push({
+              pathname: "/assignment-details",
+              params: {
+                title: "Database Assignment",
+                course: "Database Management System",
+                due: "Due tomorrow",
+              },
+            })
           }
         >
           <View style={styles.iconBox}>
@@ -365,16 +267,56 @@ useFocusEffect(
 
           <View style={styles.cardInfo}>
             <Text style={styles.cardTitle}>
-              View your assignments
+              Database Assignment
             </Text>
 
             <Text style={styles.cardSubtitle}>
-              Check deadlines and progress
+              Database Management System
             </Text>
 
-            <Text style={styles.deadline}>
-              Open Assignments
+            <Text style={styles.deadline}>Due tomorrow</Text>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
+
+        {/* Assignment 2 */}
+        <TouchableOpacity
+          style={styles.assignmentCard}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push({
+              pathname: "/assignment-details",
+              params: {
+                title: "Java OOP Project",
+                course: "Object-Oriented Programming",
+                due: "Due in 4 days",
+              },
+            })
+          }
+        >
+          <View style={styles.iconBox}>
+            <Ionicons
+              name="code-slash-outline"
+              size={23}
+              color="#4F46E5"
+            />
+          </View>
+
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle}>
+              Java OOP Project
             </Text>
+
+            <Text style={styles.cardSubtitle}>
+              Object-Oriented Programming
+            </Text>
+
+            <Text style={styles.deadline}>Due in 4 days</Text>
           </View>
 
           <Ionicons
@@ -392,138 +334,40 @@ useFocusEffect(
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() =>
-              router.push(
-                "/(tabs)/schedule"
-              )
-            }
+            onPress={() => router.push("/(tabs)/schedule")}
           >
-            <Text style={styles.seeAll}>
-              View schedule
-            </Text>
+            <Text style={styles.seeAll}>View schedule</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Loading */}
-        {loadingSchedule ? (
-          <View style={styles.loadingCard}>
-            <ActivityIndicator
-              size="small"
-              color="#4F46E5"
-            />
-
-            <Text style={styles.loadingText}>
-              Loading today's classes...
-            </Text>
-          </View>
-        ) : dashboardClasses.length > 0 ? (
-          <View style={styles.classList}>
-            {dashboardClasses.map(
-              (item, index) => (
-                <TouchableOpacity
-                  key={
-                    item.id ||
-                    `${item.subject}-${index}`
-                  }
-                  style={styles.classCard}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    router.push(
-                      "/(tabs)/schedule"
-                    )
-                  }
-                >
-                  {/* Time */}
-                  <View style={styles.timeBox}>
-                    <Text style={styles.time}>
-                      {item.time}
-                    </Text>
-
-                    <Text style={styles.am}>
-                      {item.period}
-                    </Text>
-                  </View>
-
-                  {/* Class Information */}
-                  <View style={styles.classInfo}>
-                    <Text
-                      style={styles.cardTitle}
-                      numberOfLines={1}
-                    >
-                      {item.subject}
-                    </Text>
-
-                    <Text
-                      style={styles.cardSubtitle}
-                      numberOfLines={1}
-                    >
-                      {item.location}
-                    </Text>
-
-                    <Text
-                      style={styles.classType}
-                    >
-                      {item.type}
-                    </Text>
-                  </View>
-
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color="#94A3B8"
-                  />
-                </TouchableOpacity>
-              )
-            )}
-          </View>
-        ) : (
-          <View style={styles.emptyClassCard}>
-            <View style={styles.emptyClassIcon}>
-              <Ionicons
-                name="calendar-clear-outline"
-                size={27}
-                color="#4F46E5"
-              />
-            </View>
-
-            <View style={styles.emptyClassInfo}>
-              <Text
-                style={styles.emptyClassTitle}
-              >
-                No classes today
-              </Text>
-
-              <Text
-                style={styles.emptyClassText}
-              >
-                You don't have any classes
-                scheduled for today.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Weekly Schedule Summary */}
-        <View style={styles.statusCard}>
-          <View style={styles.statusIcon}>
-            <Ionicons
-              name="calendar-outline"
-              size={22}
-              color="#4F46E5"
-            />
+        <TouchableOpacity
+          style={styles.classCard}
+          activeOpacity={0.8}
+          onPress={() => router.push("/(tabs)/schedule")}
+        >
+          <View style={styles.timeBox}>
+            <Text style={styles.time}>09:00</Text>
+            <Text style={styles.am}>AM</Text>
           </View>
 
-          <View style={styles.statusInfo}>
-            <Text style={styles.statusTitle}>
-              Weekly Schedule
+          <View style={styles.classInfo}>
+            <Text style={styles.cardTitle}>
+              Software Engineering
             </Text>
 
-            <Text style={styles.statusText}>
-              {totalClasses} classes scheduled
-              this week.
+            <Text style={styles.cardSubtitle}>
+              Lecture Hall A
             </Text>
+
+            <Text style={styles.classType}>Lecture</Text>
           </View>
-        </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color="#94A3B8"
+          />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -539,21 +383,6 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 60,
     paddingBottom: 100,
-  },
-
-  loadingCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 22,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  loadingText: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 8,
   },
 
   header: {
@@ -672,6 +501,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  gpaSubtext: {
+    color: "#E0E7FF",
+    fontSize: 11,
+    marginTop: 3,
+  },
+
   gpaBadge: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 14,
@@ -682,6 +517,7 @@ const styles = StyleSheet.create({
   gpaBadgeText: {
     color: "#4F46E5",
     fontWeight: "700",
+    fontSize: 12,
   },
 
   sectionHeader: {
@@ -701,7 +537,6 @@ const styles = StyleSheet.create({
   seeAll: {
     color: "#4F46E5",
     fontWeight: "600",
-    fontSize: 13,
   },
 
   assignmentCard: {
@@ -748,10 +583,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  classList: {
-    gap: 12,
-  },
-
   classCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -789,77 +620,5 @@ const styles = StyleSheet.create({
     color: "#4F46E5",
     fontWeight: "600",
     marginTop: 5,
-  },
-
-  emptyClassCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  emptyClassIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  emptyClassInfo: {
-    flex: 1,
-    marginLeft: 13,
-  },
-
-  emptyClassTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  emptyClassText: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 4,
-    lineHeight: 17,
-  },
-
-  statusCard: {
-    marginTop: 24,
-    backgroundColor: "#EEF2FF",
-    borderRadius: 18,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  statusIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  statusInfo: {
-    flex: 1,
-    marginLeft: 13,
-  },
-
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  statusText: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 4,
   },
 });

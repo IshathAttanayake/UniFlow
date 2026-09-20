@@ -1,13 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const GRADES_KEY = "@uniflow_grades";
@@ -21,12 +26,13 @@ type SavedGrade = {
   percentage: number;
 };
 
-const normalizeCourseName = (value: string) =>
-  value
+const normalizeCourseName = (value: string) => {
+  return value
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ")
     .replace(/systems$/, "system");
+};
 
 const getLetterGrade = (percentage: number) => {
   if (percentage >= 85) return "A";
@@ -42,93 +48,92 @@ const getLetterGrade = (percentage: number) => {
 };
 
 export default function GradeDetailsScreen() {
-  const params = useLocalSearchParams();
-  const courseName = typeof params.course === "string" ? params.course : "";
-  const courseCode = typeof params.code === "string" ? params.code : "";
+  const { course, code } = useLocalSearchParams();
+
+  const courseName =
+    typeof course === "string" ? course : "Course";
+
+  const courseCode =
+    typeof code === "string" ? code : "";
 
   const [grades, setGrades] = useState<SavedGrade[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadGrades();
-  }, [courseName]);
-
-  const loadGrades = async () => {
+  const loadGrades = useCallback(async () => {
     try {
       setLoading(true);
 
-      const storedData = await AsyncStorage.getItem(GRADES_KEY);
+      const stored = await AsyncStorage.getItem(GRADES_KEY);
 
-      if (!storedData) {
+      if (!stored) {
         setGrades([]);
         return;
       }
 
-      const parsed = JSON.parse(storedData);
+      const parsed = JSON.parse(stored);
 
       if (!Array.isArray(parsed)) {
         setGrades([]);
         return;
       }
 
-      const normalizedTarget = normalizeCourseName(courseName);
+      const validGrades: SavedGrade[] = parsed.filter(
+        (item): item is SavedGrade =>
+          item &&
+          typeof item.id === "string" &&
+          typeof item.course === "string" &&
+          typeof item.assessment === "string" &&
+          typeof item.marks === "number" &&
+          typeof item.maxMarks === "number" &&
+          typeof item.percentage === "number",
+      );
 
-      const filteredGrades = parsed
-        .map((item: any) => {
-          const marks = Number(item.marks);
-          const maxMarks = Number(item.maxMarks);
-          let percentage = Number(item.percentage);
+      const matchingGrades = validGrades.filter(
+        (item) =>
+          normalizeCourseName(item.course) ===
+          normalizeCourseName(courseName),
+      );
 
-          if (
-            (!Number.isFinite(percentage) ||
-              percentage < 0 ||
-              percentage > 100) &&
-            Number.isFinite(marks) &&
-            Number.isFinite(maxMarks) &&
-            maxMarks > 0
-          ) {
-            percentage = Math.round((marks / maxMarks) * 100);
-          }
-
-          return {
-            id: String(item.id ?? Date.now()),
-            course: String(item.course ?? "").trim(),
-            assessment: String(item.assessment ?? "").trim(),
-            marks,
-            maxMarks,
-            percentage,
-          };
-        })
-        .filter(
-          (item) =>
-            item.course !== "" &&
-            Number.isFinite(item.percentage) &&
-            normalizeCourseName(item.course) === normalizedTarget,
-        );
-
-      setGrades(filteredGrades);
+      setGrades(matchingGrades);
     } catch (error) {
-      console.error("GRADE DETAILS ERROR:", error);
+      console.log(
+        "GRADE DETAILS: Error loading grades =",
+        error,
+      );
+
       setGrades([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseName]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadGrades();
+    }, [loadGrades]),
+  );
 
   const average =
     grades.length > 0
       ? Math.round(
-          grades.reduce((total, item) => total + item.percentage, 0) /
-            grades.length,
+          grades.reduce(
+            (total, grade) => total + grade.percentage,
+            0,
+          ) / grades.length,
         )
-      : 0;
+      : null;
 
-  const bestScore =
-    grades.length > 0
-      ? Math.max(...grades.map((item) => item.percentage))
-      : 0;
+  const letterGrade =
+    average !== null ? getLetterGrade(average) : "-";
 
-  const displayCourse = courseName || "Your course";
+  const handleAddAssessment = () => {
+    router.push({
+      pathname: "/add-grade",
+      params: {
+        course: courseName,
+      },
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -136,84 +141,200 @@ export default function GradeDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             activeOpacity={0.8}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={22} color="#111827" />
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#111827"
+            />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Grade Details</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={styles.headerTitle}>
+            Grade Details
+          </Text>
+
+          <View style={styles.headerSpace} />
         </View>
 
-        <View style={styles.heroCard}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="school-outline" size={26} color="#4F46E5" />
+        {/* Course Header */}
+        <View style={styles.courseCard}>
+          <View style={styles.courseIcon}>
+            <Ionicons
+              name="school-outline"
+              size={30}
+              color="#4F46E5"
+            />
           </View>
 
-          <Text style={styles.courseName}>{displayCourse}</Text>
-          <Text style={styles.courseCode}>{courseCode || "Course"}</Text>
+          <Text style={styles.courseName}>
+            {courseName}
+          </Text>
 
-          <View style={styles.progressRow}>
-            <View style={styles.progressInfo}>
-              <Text style={styles.progressLabel}>Course average</Text>
-              <Text style={styles.progressValue}>{average}%</Text>
-            </View>
-
-            <View style={styles.gradeBadge}>
-              <Text style={styles.gradeText}>{getLetterGrade(average || 0)}</Text>
-            </View>
-          </View>
+          {courseCode ? (
+            <Text style={styles.courseCode}>
+              {courseCode}
+            </Text>
+          ) : null}
         </View>
 
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Assessments</Text>
-            <Text style={styles.summaryValue}>{grades.length}</Text>
-          </View>
+        {/* Average */}
+        <View style={styles.averageCard}>
+          <View>
+            <Text style={styles.averageLabel}>
+              Course Average
+            </Text>
 
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Best score</Text>
-            <Text style={styles.summaryValue}>{bestScore}%</Text>
-          </View>
-        </View>
+            <Text style={styles.averageValue}>
+              {average !== null ? `${average}%` : "--"}
+            </Text>
 
-        <Text style={styles.sectionTitle}>Assessment History</Text>
-
-        {loading ? (
-          <View style={styles.loadingCard}>
-            <Ionicons name="sync-outline" size={22} color="#4F46E5" />
-            <Text style={styles.loadingText}>Loading marks...</Text>
-          </View>
-        ) : grades.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No assessments yet</Text>
-            <Text style={styles.emptyText}>
-              Add a grade for this course to see your history here.
+            <Text style={styles.assessmentCount}>
+              {grades.length}{" "}
+              {grades.length === 1
+                ? "assessment"
+                : "assessments"}
             </Text>
           </View>
+
+          <View style={styles.gradeBadge}>
+            <Text style={styles.gradeBadgeText}>
+              {letterGrade}
+            </Text>
+          </View>
+        </View>
+
+        {/* Assessments Header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Assessments
+          </Text>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.8}
+            onPress={handleAddAssessment}
+          >
+            <Ionicons
+              name="add"
+              size={20}
+              color="#FFFFFF"
+            />
+
+            <Text style={styles.addButtonText}>
+              Add
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Loading */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="small"
+              color="#4F46E5"
+            />
+
+            <Text style={styles.loadingText}>
+              Loading grades...
+            </Text>
+          </View>
+        ) : grades.length === 0 ? (
+          /* Empty State */
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIcon}>
+              <Ionicons
+                name="document-text-outline"
+                size={30}
+                color="#4F46E5"
+              />
+            </View>
+
+            <Text style={styles.emptyTitle}>
+              No assessments yet
+            </Text>
+
+            <Text style={styles.emptyText}>
+              Add your first assessment to calculate
+              your course grade.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.emptyButton}
+              activeOpacity={0.8}
+              onPress={handleAddAssessment}
+            >
+              <Ionicons
+                name="add"
+                size={19}
+                color="#FFFFFF"
+              />
+
+              <Text style={styles.emptyButtonText}>
+                Add Assessment
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          <View style={styles.listContainer}>
-            {grades.map((item) => (
-              <View key={item.id} style={styles.gradeRow}>
-                <View style={styles.rowLeft}>
-                  <Text style={styles.assessmentName}>{item.assessment}</Text>
-                  <Text style={styles.assessmentMeta}>
-                    {item.marks} / {item.maxMarks} marks
+          /* Assessment List */
+          <View style={styles.assessmentList}>
+            {grades.map((grade) => (
+              <View
+                key={grade.id}
+                style={styles.assessmentCard}
+              >
+                <View style={styles.assessmentIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={21}
+                    color="#4F46E5"
+                  />
+                </View>
+
+                <View style={styles.assessmentInfo}>
+                  <Text style={styles.assessmentTitle}>
+                    {grade.assessment}
+                  </Text>
+
+                  <Text style={styles.marks}>
+                    {grade.marks} / {grade.maxMarks}
                   </Text>
                 </View>
 
-                <View style={styles.rowRight}>
-                  <Text style={styles.scoreValue}>{item.percentage}%</Text>
-                  <Text style={styles.scoreLetter}>{getLetterGrade(item.percentage)}</Text>
+                <View style={styles.percentageBox}>
+                  <Text style={styles.percentage}>
+                    {grade.percentage}%
+                  </Text>
+
+                  <Text style={styles.smallGrade}>
+                    {getLetterGrade(grade.percentage)}
+                  </Text>
                 </View>
               </View>
             ))}
           </View>
         )}
+
+        {/* Info */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoIcon}>
+            <Ionicons
+              name="information-circle-outline"
+              size={23}
+              color="#4F46E5"
+            />
+          </View>
+
+          <Text style={styles.infoText}>
+            Your course average is calculated from the
+            assessments currently saved for this course.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -224,198 +345,281 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+
   content: {
     padding: 24,
-    paddingTop: 60,
-    paddingBottom: 120,
+    paddingTop: 55,
+    paddingBottom: 110,
   },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 24,
   },
+
   backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  headerSpace: {
+    width: 44,
+  },
+
+  courseCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 22,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  courseIcon: {
+    width: 62,
+    height: 62,
+    borderRadius: 19,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 13,
+  },
+
+  courseName: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
+  },
+
+  courseCode: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 5,
+  },
+
+  averageCard: {
+    marginTop: 16,
+    backgroundColor: "#4F46E5",
+    borderRadius: 20,
+    padding: 21,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  averageLabel: {
+    fontSize: 13,
+    color: "#E0E7FF",
+  },
+
+  averageValue: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginTop: 2,
+  },
+
+  assessmentCount: {
+    fontSize: 12,
+    color: "#E0E7FF",
+    marginTop: 2,
+  },
+
+  gradeBadge: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: {
+
+  gradeBadgeText: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#4F46E5",
+  },
+
+  sectionHeader: {
+    marginTop: 30,
+    marginBottom: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  sectionTitle: {
     fontSize: 20,
     fontWeight: "800",
     color: "#111827",
   },
-  headerSpacer: {
-    width: 42,
+
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4F46E5",
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 11,
+    gap: 5,
   },
-  heroCard: {
-    marginTop: 24,
+
+  addButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  loadingContainer: {
+    padding: 30,
+    alignItems: "center",
+  },
+
+  loadingText: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 8,
+  },
+
+  assessmentList: {
+    gap: 12,
+  },
+
+  assessmentCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 22,
+    borderRadius: 17,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  heroIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+
+  assessmentIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  assessmentInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  assessmentTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  marks: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 5,
+  },
+
+  percentageBox: {
+    alignItems: "flex-end",
+  },
+
+  percentage: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#4F46E5",
+  },
+
+  smallGrade: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748B",
+    marginTop: 3,
+  },
+
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 28,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     backgroundColor: "#EEF2FF",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 14,
   },
-  courseName: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  courseCode: {
-    marginTop: 4,
-    fontSize: 13,
-    color: "#4F46E5",
-    fontWeight: "700",
-  },
-  progressRow: {
-    marginTop: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  progressInfo: {
-    flex: 1,
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: "#64748B",
-  },
-  progressValue: {
-    marginTop: 4,
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  gradeBadge: {
-    minWidth: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  gradeText: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#4F46E5",
-  },
-  summaryRow: {
-    marginTop: 20,
-    flexDirection: "row",
-    gap: 10,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: "#64748B",
-  },
-  summaryValue: {
-    marginTop: 8,
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  sectionTitle: {
-    marginTop: 26,
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  loadingCard: {
-    marginTop: 16,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  loadingText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: "#64748B",
-  },
-  emptyCard: {
-    marginTop: 16,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
+
   emptyTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: "#111827",
   },
+
   emptyText: {
-    marginTop: 8,
     fontSize: 13,
     color: "#64748B",
-    lineHeight: 20,
+    textAlign: "center",
+    lineHeight: 19,
+    marginTop: 7,
   },
-  listContainer: {
-    marginTop: 16,
-    gap: 12,
+
+  emptyButton: {
+    marginTop: 18,
+    backgroundColor: "#4F46E5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  gradeRow: {
-    backgroundColor: "#FFFFFF",
+
+  emptyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  infoCard: {
+    marginTop: 24,
+    backgroundColor: "#EEF2FF",
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
   },
-  rowLeft: {
+
+  infoIcon: {
+    marginRight: 11,
+  },
+
+  infoText: {
     flex: 1,
-    marginRight: 12,
-  },
-  assessmentName: {
-    fontWeight: "700",
-    fontSize: 15,
-    color: "#111827",
-  },
-  assessmentMeta: {
-    marginTop: 4,
     fontSize: 12,
-    color: "#64748B",
-  },
-  rowRight: {
-    alignItems: "flex-end",
-  },
-  scoreValue: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  scoreLetter: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: "700",
+    lineHeight: 18,
     color: "#4F46E5",
   },
 });

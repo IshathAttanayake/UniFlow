@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 const GRADES_KEY = "@uniflow_grades";
+const ASSIGNMENTS_KEY = "@uniflow_assignments";
+const SCHEDULE_KEY = "@uniflow_schedule";
 
 type SavedGrade = {
   id: string;
@@ -28,14 +30,6 @@ const normalizeCourseName = (value: string) => {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .replace(/systems$/, "system");
-};
-
-const getLetterGrade = (percentage: number) => {
-  if (percentage >= 85) return "A";
-  if (percentage >= 70) return "B";
-  if (percentage >= 55) return "C";
-  if (percentage >= 40) return "D";
-  return "F";
 };
 
 const getGPAValue = (percentage: number) => {
@@ -57,11 +51,26 @@ const getGPAStatus = (gpa: number) => {
 export default function DashboardScreen() {
   const [gpa, setGpa] = useState<number | null>(null);
 
+  const [assignmentCount, setAssignmentCount] = useState(3);
+  const [classCount, setClassCount] = useState(2);
+
   useFocusEffect(
     useCallback(() => {
-      loadGPA();
+      loadDashboardData();
     }, []),
   );
+
+  const loadDashboardData = async () => {
+    await Promise.all([
+      loadGPA(),
+      loadAssignmentCount(),
+      loadClassCount(),
+    ]);
+  };
+
+  // =========================
+  // GPA
+  // =========================
 
   const loadGPA = async () => {
     try {
@@ -113,7 +122,8 @@ export default function DashboardScreen() {
 
         if (totalMaxMarks <= 0) return;
 
-        const percentage = (totalMarks / totalMaxMarks) * 100;
+        const percentage =
+          (totalMarks / totalMaxMarks) * 100;
 
         courseGPAs.push(getGPAValue(percentage));
       });
@@ -124,8 +134,10 @@ export default function DashboardScreen() {
       }
 
       const overallGPA =
-        courseGPAs.reduce((sum, value) => sum + value, 0) /
-        courseGPAs.length;
+        courseGPAs.reduce(
+          (sum, value) => sum + value,
+          0,
+        ) / courseGPAs.length;
 
       setGpa(Number(overallGPA.toFixed(2)));
     } catch (error) {
@@ -134,8 +146,84 @@ export default function DashboardScreen() {
     }
   };
 
-  const displayGPA = gpa !== null ? gpa.toFixed(2) : "--";
-  const gpaStatus = gpa !== null ? getGPAStatus(gpa) : "No grades yet";
+  // =========================
+  // ASSIGNMENT COUNT
+  // =========================
+
+  const loadAssignmentCount = async () => {
+    try {
+      const saved =
+        await AsyncStorage.getItem(ASSIGNMENTS_KEY);
+
+      if (!saved) {
+        setAssignmentCount(3);
+        return;
+      }
+
+      const parsed = JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        setAssignmentCount(parsed.length);
+      } else {
+        setAssignmentCount(3);
+      }
+    } catch (error) {
+      console.log(
+        "Dashboard assignment count error:",
+        error,
+      );
+
+      setAssignmentCount(3);
+    }
+  };
+
+  // =========================
+  // CLASS COUNT
+  // =========================
+
+  const loadClassCount = async () => {
+    try {
+      const saved =
+        await AsyncStorage.getItem(SCHEDULE_KEY);
+
+      if (!saved) {
+        setClassCount(2);
+        return;
+      }
+
+      const parsed = JSON.parse(saved);
+
+      if (!parsed || typeof parsed !== "object") {
+        setClassCount(2);
+        return;
+      }
+
+      let totalClasses = 0;
+
+      Object.values(parsed).forEach((dayClasses) => {
+        if (Array.isArray(dayClasses)) {
+          totalClasses += dayClasses.length;
+        }
+      });
+
+      setClassCount(totalClasses);
+    } catch (error) {
+      console.log(
+        "Dashboard class count error:",
+        error,
+      );
+
+      setClassCount(2);
+    }
+  };
+
+  const displayGPA =
+    gpa !== null ? gpa.toFixed(2) : "--";
+
+  const gpaStatus =
+    gpa !== null
+      ? getGPAStatus(gpa)
+      : "No grades yet";
 
   return (
     <View style={styles.container}>
@@ -148,15 +236,22 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Good morning 👋</Text>
-            <Text style={styles.name}>Ishath</Text>
+            <Text style={styles.greeting}>
+              Good morning 👋
+            </Text>
+
+            <Text style={styles.name}>
+              Ishath
+            </Text>
           </View>
 
           <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.notificationButton}
               activeOpacity={0.8}
-              onPress={() => router.push("/notifications")}
+              onPress={() =>
+                router.push("/notifications")
+              }
             >
               <Ionicons
                 name="notifications-outline"
@@ -170,53 +265,86 @@ export default function DashboardScreen() {
             <TouchableOpacity
               style={styles.profile}
               activeOpacity={0.8}
-              onPress={() => router.push("/(tabs)/profile")}
+              onPress={() =>
+                router.push("/(tabs)/profile")
+              }
             >
-              <Text style={styles.profileText}>I</Text>
+              <Text style={styles.profileText}>
+                I
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <Text style={styles.subtitle}>
-          Here's what's happening with your studies today.
+          Here's what's happening with your studies
+          today.
         </Text>
 
         {/* Quick Stats */}
         <View style={styles.statsRow}>
+          {/* Modules */}
           <TouchableOpacity
             style={styles.statCard}
             activeOpacity={0.8}
-            onPress={() => router.push("/(tabs)/courses")}
+            onPress={() =>
+              router.push("/(tabs)/courses")
+            }
           >
-            <Text style={styles.statNumber}>6</Text>
-            <Text style={styles.statLabel}>Modules</Text>
+            <Text style={styles.statNumber}>
+              6
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Modules
+            </Text>
           </TouchableOpacity>
 
+          {/* Assignments */}
           <TouchableOpacity
             style={styles.statCard}
             activeOpacity={0.8}
-            onPress={() => router.push("/(tabs)/assignments")}
+            onPress={() =>
+              router.push("/(tabs)/assignments")
+            }
           >
-            <Text style={styles.statNumber}>3</Text>
-            <Text style={styles.statLabel}>Assignments</Text>
+            <Text style={styles.statNumber}>
+              {assignmentCount}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Assignments
+            </Text>
           </TouchableOpacity>
 
+          {/* Classes */}
           <TouchableOpacity
             style={styles.statCard}
             activeOpacity={0.8}
-            onPress={() => router.push("/(tabs)/schedule")}
+            onPress={() =>
+              router.push("/(tabs)/schedule")
+            }
           >
-            <Text style={styles.statNumber}>2</Text>
-            <Text style={styles.statLabel}>Classes</Text>
+            <Text style={styles.statNumber}>
+              {classCount}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Classes
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Dynamic GPA */}
         <View style={styles.gpaCard}>
           <View>
-            <Text style={styles.gpaLabel}>Current GPA</Text>
+            <Text style={styles.gpaLabel}>
+              Current GPA
+            </Text>
 
-            <Text style={styles.gpaValue}>{displayGPA}</Text>
+            <Text style={styles.gpaValue}>
+              {displayGPA}
+            </Text>
 
             <Text style={styles.gpaSubtext}>
               {gpa !== null
@@ -226,19 +354,27 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.gpaBadge}>
-            <Text style={styles.gpaBadgeText}>{gpaStatus}</Text>
+            <Text style={styles.gpaBadgeText}>
+              {gpaStatus}
+            </Text>
           </View>
         </View>
 
         {/* Upcoming */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming</Text>
+          <Text style={styles.sectionTitle}>
+            Upcoming
+          </Text>
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => router.push("/(tabs)/assignments")}
+            onPress={() =>
+              router.push("/(tabs)/assignments")
+            }
           >
-            <Text style={styles.seeAll}>See all</Text>
+            <Text style={styles.seeAll}>
+              See all
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -251,7 +387,8 @@ export default function DashboardScreen() {
               pathname: "/assignment-details",
               params: {
                 title: "Database Assignment",
-                course: "Database Management System",
+                course:
+                  "Database Management System",
                 due: "Due tomorrow",
               },
             })
@@ -274,7 +411,9 @@ export default function DashboardScreen() {
               Database Management System
             </Text>
 
-            <Text style={styles.deadline}>Due tomorrow</Text>
+            <Text style={styles.deadline}>
+              Due tomorrow
+            </Text>
           </View>
 
           <Ionicons
@@ -293,7 +432,8 @@ export default function DashboardScreen() {
               pathname: "/assignment-details",
               params: {
                 title: "Java OOP Project",
-                course: "Object-Oriented Programming",
+                course:
+                  "Object-Oriented Programming",
                 due: "Due in 4 days",
               },
             })
@@ -316,7 +456,9 @@ export default function DashboardScreen() {
               Object-Oriented Programming
             </Text>
 
-            <Text style={styles.deadline}>Due in 4 days</Text>
+            <Text style={styles.deadline}>
+              Due in 4 days
+            </Text>
           </View>
 
           <Ionicons
@@ -334,20 +476,31 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => router.push("/(tabs)/schedule")}
+            onPress={() =>
+              router.push("/(tabs)/schedule")
+            }
           >
-            <Text style={styles.seeAll}>View schedule</Text>
+            <Text style={styles.seeAll}>
+              View schedule
+            </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
           style={styles.classCard}
           activeOpacity={0.8}
-          onPress={() => router.push("/(tabs)/schedule")}
+          onPress={() =>
+            router.push("/(tabs)/schedule")
+          }
         >
           <View style={styles.timeBox}>
-            <Text style={styles.time}>09:00</Text>
-            <Text style={styles.am}>AM</Text>
+            <Text style={styles.time}>
+              09:00
+            </Text>
+
+            <Text style={styles.am}>
+              AM
+            </Text>
           </View>
 
           <View style={styles.classInfo}>
@@ -359,7 +512,9 @@ export default function DashboardScreen() {
               Lecture Hall A
             </Text>
 
-            <Text style={styles.classType}>Lecture</Text>
+            <Text style={styles.classType}>
+              Lecture
+            </Text>
           </View>
 
           <Ionicons

@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,51 +10,41 @@ import {
   View,
 } from "react-native";
 
-const courses = [
-  {
-    name: "Database Management Systems",
-    code: "CS 2021",
-    lecturer: "Dr. Kasun Perera",
-    progress: 72,
-  },
-  {
-    name: "Object Oriented Programming",
-    code: "CS 2022",
-    lecturer: "Mr. Nimal Fernando",
-    progress: 65,
-  },
-  {
-    name: "Software Engineering",
-    code: "CS 2023",
-    lecturer: "Dr. Sanduni Silva",
-    progress: 80,
-  },
-  {
-    name: "Data Structures & Algorithms",
-    code: "CS 2024",
-    lecturer: "Mr. Tharindu Jayasinghe",
-    progress: 58,
-  },
-  {
-    name: "Operating Systems",
-    code: "CS 2025",
-    lecturer: "Dr. Chamara Perera",
-    progress: 70,
-  },
-  {
-    name: "Computer Networks",
-    code: "CS 2026",
-    lecturer: "Mr. Kasun Silva",
-    progress: 62,
-  },
-];
+import {
+  Course,
+  getCourses,
+} from "../course-storage";
 
 export default function CoursesScreen() {
-  const openCourse = (courseName: string) => {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+
+      const savedCourses = await getCourses();
+
+      setCourses(savedCourses);
+    } catch (error) {
+      console.log("Courses loading error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCourses();
+    }, []),
+  );
+
+  const openCourse = (course: Course) => {
     router.push({
       pathname: "/course-details",
       params: {
-        course: courseName,
+        course: course.name,
+        code: course.code,
       },
     });
   };
@@ -65,87 +57,164 @@ export default function CoursesScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Courses</Text>
+          <View>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Courses</Text>
 
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{courses.length}</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countText}>
+                  {courses.length}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.subtitle}>
+              Your current semester courses
+            </Text>
           </View>
+
+          {/* Add Course */}
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.8}
+            onPress={() =>
+              router.push("/add-course")
+            }
+          >
+            <Ionicons
+              name="add"
+              size={24}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.subtitle}>
-          Your current semester courses
-        </Text>
+        {/* Loading */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="large"
+              color="#4F46E5"
+            />
 
-        {/* Course Cards */}
-        <View style={styles.courseList}>
-          {courses.map((course) => (
-            <TouchableOpacity
-              key={course.code}
-              style={styles.courseCard}
-              activeOpacity={0.8}
-              onPress={() => openCourse(course.name)}
-            >
-              {/* Icon */}
-              <View style={styles.iconContainer}>
-                <Ionicons
-                  name="book-outline"
-                  size={25}
-                  color="#4F46E5"
-                />
-              </View>
-
-              {/* Course information */}
-              <View style={styles.courseInfo}>
-                <Text style={styles.courseName}>
-                  {course.name}
-                </Text>
-
-                <Text style={styles.courseCode}>
-                  {course.code}
-                </Text>
-
-                <View style={styles.lecturerRow}>
-                  <Ionicons
-                    name="person-outline"
-                    size={14}
-                    color="#64748B"
-                  />
-
-                  <Text style={styles.lecturer}>
-                    {course.lecturer}
-                  </Text>
-                </View>
-
-                {/* Progress */}
-                <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>
-                    Progress
-                  </Text>
-
-                  <Text style={styles.progressValue}>
-                    {course.progress}%
-                  </Text>
-                </View>
-
-                <View style={styles.progressBackground}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      { width: `${course.progress}%` },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              {/* Arrow */}
+            <Text style={styles.loadingText}>
+              Loading courses...
+            </Text>
+          </View>
+        ) : courses.length === 0 ? (
+          /* Empty State */
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIcon}>
               <Ionicons
-                name="chevron-forward"
-                size={20}
-                color="#94A3B8"
+                name="book-outline"
+                size={32}
+                color="#4F46E5"
               />
+            </View>
+
+            <Text style={styles.emptyTitle}>
+              No courses yet
+            </Text>
+
+            <Text style={styles.emptyText}>
+              Add your first course to start
+              managing your academic progress.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.emptyButton}
+              activeOpacity={0.8}
+              onPress={() =>
+                router.push("/add-course")
+              }
+            >
+              <Ionicons
+                name="add"
+                size={19}
+                color="#FFFFFF"
+              />
+
+              <Text style={styles.emptyButtonText}>
+                Add Course
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
+        ) : (
+          /* Course Cards */
+          <View style={styles.courseList}>
+            {courses.map((course) => (
+              <TouchableOpacity
+                key={course.id}
+                style={styles.courseCard}
+                activeOpacity={0.8}
+                onPress={() => openCourse(course)}
+              >
+                {/* Icon */}
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="book-outline"
+                    size={25}
+                    color="#4F46E5"
+                  />
+                </View>
+
+                {/* Course Information */}
+                <View style={styles.courseInfo}>
+                  <Text style={styles.courseName}>
+                    {course.name}
+                  </Text>
+
+                  <Text style={styles.courseCode}>
+                    {course.code}
+                  </Text>
+
+                  <View style={styles.lecturerRow}>
+                    <Ionicons
+                      name="person-outline"
+                      size={14}
+                      color="#64748B"
+                    />
+
+                    <Text style={styles.lecturer}>
+                      {course.lecturer}
+                    </Text>
+                  </View>
+
+                  {/* Progress */}
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.progressLabel}>
+                      Progress
+                    </Text>
+
+                    <Text style={styles.progressValue}>
+                      {course.progress}%
+                    </Text>
+                  </View>
+
+                  <View
+                    style={styles.progressBackground}
+                  >
+                    <View
+                      style={[
+                        styles.progressBar,
+                        {
+                          width: `${course.progress}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                {/* Arrow */}
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color="#94A3B8"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -164,6 +233,13 @@ const styles = StyleSheet.create({
   },
 
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
   },
@@ -192,7 +268,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#64748B",
     marginTop: 6,
-    marginBottom: 24,
+  },
+
+  addButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "#4F46E5",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   courseList: {
@@ -278,5 +362,68 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#4F46E5",
     borderRadius: 4,
+  },
+
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+  },
+
+  loadingText: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 12,
+  },
+
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 28,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  emptyIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  emptyTitle: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  emptyText: {
+    fontSize: 13,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 19,
+    marginTop: 7,
+    maxWidth: 280,
+  },
+
+  emptyButton: {
+    marginTop: 20,
+    height: 46,
+    paddingHorizontal: 20,
+    borderRadius: 13,
+    backgroundColor: "#4F46E5",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+
+  emptyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

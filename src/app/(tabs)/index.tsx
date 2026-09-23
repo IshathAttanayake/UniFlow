@@ -10,8 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getUser, User } from "../../utils/auth";
 
 const GRADES_KEY = "@uniflow_grades";
+const COURSES_KEY = "@uniflow_courses";
 const ASSIGNMENTS_KEY = "@uniflow_assignments";
 const SCHEDULE_KEY = "@uniflow_schedule";
 
@@ -50,15 +52,123 @@ const getGPAStatus = (gpa: number) => {
 
 export default function DashboardScreen() {
   const [gpa, setGpa] = useState<number | null>(null);
+const [user, setUser] = useState<User | null>(null);
 
-  const [assignmentCount, setAssignmentCount] = useState(3);
-  const [classCount, setClassCount] = useState(2);
+const [courseCount, setCourseCount] = useState(0);
+const [assignmentCount, setAssignmentCount] = useState(0);
+const [classCount, setClassCount] = useState(0);
+const [upcomingAssignments, setUpcomingAssignments] =
+  useState<any[]>([]);
+  const [todayClasses, setTodayClasses] = useState<any[]>([]);
 
   useFocusEffect(
-    useCallback(() => {
-      loadDashboardData();
-    }, []),
-  );
+  useCallback(() => {
+    loadGPA();
+    loadUser();
+    loadDashboardStats();
+    loadUpcomingAssignments();
+    loadTodayClasses();
+  }, []),
+);
+
+const loadTodayClasses = async () => {
+  try {
+    const savedSchedule =
+      await AsyncStorage.getItem(SCHEDULE_KEY);
+
+    if (!savedSchedule) {
+      setTodayClasses([]);
+      return;
+    }
+
+    const parsedSchedule = JSON.parse(savedSchedule);
+
+    if (!Array.isArray(parsedSchedule)) {
+      setTodayClasses([]);
+      return;
+    }
+
+    const today = new Date();
+
+    const dayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    const todayName = dayNames[today.getDay()];
+
+    const classesToday = parsedSchedule
+      .filter((item) => item.day === todayName)
+      .sort((a, b) => {
+        return a.time.localeCompare(b.time);
+      });
+
+    setTodayClasses(classesToday);
+  } catch (error) {
+    console.log(
+      "Dashboard today's classes error:",
+      error,
+    );
+
+    setTodayClasses([]);
+  }
+};
+
+const loadUpcomingAssignments = async () => {
+  try {
+    const saved =
+      await AsyncStorage.getItem(ASSIGNMENTS_KEY);
+
+    if (!saved) {
+      setUpcomingAssignments([]);
+      return;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    if (!Array.isArray(parsed)) {
+      setUpcomingAssignments([]);
+      return;
+    }
+
+    const activeAssignments = parsed
+      .filter(
+        (assignment) =>
+          assignment.status !== "completed" &&
+          Number(assignment.progress) < 100,
+      )
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+
+        return dateA - dateB;
+      })
+      .slice(0, 2);
+
+    setUpcomingAssignments(activeAssignments);
+  } catch (error) {
+    console.log(
+      "Dashboard assignments error:",
+      error,
+    );
+
+    setUpcomingAssignments([]);
+  }
+};
+
+  const loadUser = async () => {
+  try {
+    const savedUser = await getUser();
+    setUser(savedUser);
+  } catch (error) {
+    console.log("Dashboard user error:", error);
+  }
+};
 
   const loadDashboardData = async () => {
     await Promise.all([
@@ -67,6 +177,53 @@ export default function DashboardScreen() {
       loadClassCount(),
     ]);
   };
+  const loadDashboardStats = async () => {
+  try {
+    // Courses
+    const savedCourses = await AsyncStorage.getItem(COURSES_KEY);
+    const parsedCourses = savedCourses ? JSON.parse(savedCourses) : [];
+    setCourseCount(Array.isArray(parsedCourses) ? parsedCourses.length : 0);
+
+    // Assignments
+    const savedAssignments =
+      await AsyncStorage.getItem(ASSIGNMENTS_KEY);
+
+    if (savedAssignments) {
+      const parsedAssignments =
+        JSON.parse(savedAssignments);
+
+      if (Array.isArray(parsedAssignments)) {
+        setAssignmentCount(parsedAssignments.length);
+      } else {
+        setAssignmentCount(0);
+      }
+    } else {
+      setAssignmentCount(0);
+    }
+
+    // Classes
+    const savedSchedule =
+      await AsyncStorage.getItem(SCHEDULE_KEY);
+
+    if (savedSchedule) {
+      const parsedSchedule =
+        JSON.parse(savedSchedule);
+
+      if (Array.isArray(parsedSchedule)) {
+        setClassCount(parsedSchedule.length);
+      } else {
+        setClassCount(0);
+      }
+    } else {
+      setClassCount(0);
+    }
+  } catch (error) {
+    console.log(
+      "Dashboard statistics error:",
+      error,
+    );
+  }
+};
 
   // =========================
   // GPA
@@ -241,8 +398,8 @@ export default function DashboardScreen() {
             </Text>
 
             <Text style={styles.name}>
-              Ishath
-            </Text>
+  {user?.name || "Student"}
+</Text>
           </View>
 
           <View style={styles.headerRight}>
@@ -263,16 +420,14 @@ export default function DashboardScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.profile}
-              activeOpacity={0.8}
-              onPress={() =>
-                router.push("/(tabs)/profile")
-              }
-            >
-              <Text style={styles.profileText}>
-                I
-              </Text>
-            </TouchableOpacity>
+  style={styles.profile}
+  activeOpacity={0.8}
+  onPress={() => router.push("/(tabs)/profile")}
+>
+  <Text style={styles.profileText}>
+    {user?.name?.trim()?.charAt(0)?.toUpperCase() || "S"}
+  </Text>
+</TouchableOpacity>
           </View>
         </View>
 
@@ -292,8 +447,8 @@ export default function DashboardScreen() {
             }
           >
             <Text style={styles.statNumber}>
-              6
-            </Text>
+  {courseCount}
+</Text>
 
             <Text style={styles.statLabel}>
               Modules
@@ -379,150 +534,149 @@ export default function DashboardScreen() {
         </View>
 
         {/* Assignment 1 */}
-        <TouchableOpacity
-          style={styles.assignmentCard}
-          activeOpacity={0.8}
-          onPress={() =>
-            router.push({
-              pathname: "/assignment-details",
-              params: {
-                title: "Database Assignment",
-                course:
-                  "Database Management System",
-                due: "Due tomorrow",
-              },
-            })
-          }
+        {upcomingAssignments.length > 0 ? (
+  upcomingAssignments.map((assignment) => (
+    <TouchableOpacity
+      key={assignment.id}
+      style={styles.assignmentCard}
+      activeOpacity={0.8}
+      onPress={() =>
+        router.push({
+          pathname: "/assignment-details",
+          params: {
+            id: assignment.id,
+          },
+        })
+      }
+    >
+      <View style={styles.iconBox}>
+        <Ionicons
+          name="document-text-outline"
+          size={23}
+          color="#4F46E5"
+        />
+      </View>
+
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle}>
+          {assignment.title}
+        </Text>
+
+        <Text style={styles.cardSubtitle}>
+          {assignment.course}
+        </Text>
+
+        <Text
+          style={[
+            styles.deadline,
+            assignment.status === "overdue" &&
+              styles.overdueDeadline,
+          ]}
         >
-          <View style={styles.iconBox}>
-            <Ionicons
-              name="document-text-outline"
-              size={23}
-              color="#4F46E5"
-            />
-          </View>
+          {assignment.status === "overdue"
+            ? "Overdue"
+            : assignment.due}
+        </Text>
+      </View>
 
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>
-              Database Assignment
-            </Text>
+      <Ionicons
+        name="chevron-forward"
+        size={20}
+        color="#94A3B8"
+      />
+    </TouchableOpacity>
+  ))
+) : (
+  <View style={styles.emptyAssignmentCard}>
+    <View style={styles.emptyAssignmentIcon}>
+      <Ionicons
+        name="checkmark-circle-outline"
+        size={25}
+        color="#10B981"
+      />
+    </View>
 
-            <Text style={styles.cardSubtitle}>
-              Database Management System
-            </Text>
+    <View style={styles.cardInfo}>
+      <Text style={styles.cardTitle}>
+        All caught up!
+      </Text>
 
-            <Text style={styles.deadline}>
-              Due tomorrow
-            </Text>
-          </View>
+      <Text style={styles.cardSubtitle}>
+        You have no pending assignments.
+      </Text>
+    </View>
+  </View>
+)}
 
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
-
-        {/* Assignment 2 */}
-        <TouchableOpacity
-          style={styles.assignmentCard}
-          activeOpacity={0.8}
-          onPress={() =>
-            router.push({
-              pathname: "/assignment-details",
-              params: {
-                title: "Java OOP Project",
-                course:
-                  "Object-Oriented Programming",
-                due: "Due in 4 days",
-              },
-            })
-          }
-        >
-          <View style={styles.iconBox}>
-            <Ionicons
-              name="code-slash-outline"
-              size={23}
-              color="#4F46E5"
-            />
-          </View>
-
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>
-              Java OOP Project
-            </Text>
-
-            <Text style={styles.cardSubtitle}>
-              Object-Oriented Programming
-            </Text>
-
-            <Text style={styles.deadline}>
-              Due in 4 days
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
 
         {/* Today's Classes */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Today's Classes
-          </Text>
+        {todayClasses.length > 0 ? (
+  todayClasses.map((item, index) => (
+    <TouchableOpacity
+      key={`${item.id || item.subject}-${index}`}
+      style={styles.classCard}
+      activeOpacity={0.8}
+      onPress={() =>
+        router.push({
+          pathname: "/class-details",
+          params: {
+            id: item.id,
+          },
+        })
+      }
+    >
+      <View style={styles.timeBox}>
+        <Text style={styles.time}>
+          {item.time}
+        </Text>
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() =>
-              router.push("/(tabs)/schedule")
-            }
-          >
-            <Text style={styles.seeAll}>
-              View schedule
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.am}>
+          {item.period}
+        </Text>
+      </View>
 
-        <TouchableOpacity
-          style={styles.classCard}
-          activeOpacity={0.8}
-          onPress={() =>
-            router.push("/(tabs)/schedule")
-          }
-        >
-          <View style={styles.timeBox}>
-            <Text style={styles.time}>
-              09:00
-            </Text>
+      <View style={styles.classInfo}>
+        <Text style={styles.cardTitle}>
+          {item.subject}
+        </Text>
 
-            <Text style={styles.am}>
-              AM
-            </Text>
-          </View>
+        <Text style={styles.cardSubtitle}>
+          {item.location}
+        </Text>
 
-          <View style={styles.classInfo}>
-            <Text style={styles.cardTitle}>
-              Software Engineering
-            </Text>
+        <Text style={styles.classType}>
+          {item.type}
+        </Text>
+      </View>
 
-            <Text style={styles.cardSubtitle}>
-              Lecture Hall A
-            </Text>
+      <Ionicons
+        name="chevron-forward"
+        size={20}
+        color="#94A3B8"
+      />
+    </TouchableOpacity>
+  ))
+) : (
+  <View style={styles.classCard}>
+    <View style={styles.timeBox}>
+      <Ionicons
+        name="calendar-clear-outline"
+        size={24}
+        color="#4F46E5"
+      />
+    </View>
 
-            <Text style={styles.classType}>
-              Lecture
-            </Text>
-          </View>
+    <View style={styles.classInfo}>
+      <Text style={styles.cardTitle}>
+        No classes today
+      </Text>
 
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
+      <Text style={styles.cardSubtitle}>
+        You don't have any classes scheduled for today.
+      </Text>
+    </View>
+  </View>
+)}
       </ScrollView>
     </View>
   );
@@ -776,4 +930,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 5,
   },
+
+  emptyAssignmentCard: {
+  backgroundColor: "#FFFFFF",
+  borderRadius: 16,
+  padding: 16,
+  flexDirection: "row",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+},
+
+emptyAssignmentIcon: {
+  width: 48,
+  height: 48,
+  borderRadius: 14,
+  backgroundColor: "#ECFDF5",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+overdueDeadline: {
+  color: "#DC2626",
+},
 });

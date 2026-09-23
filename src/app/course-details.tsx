@@ -1,128 +1,254 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useState } from "react";
 import {
+  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
-const courses = [
-  {
-    name: "Database Management Systems",
-    code: "CS 2021",
-    lecturer: "Dr. Kasun Perera",
-    lecturerRole: "Senior Lecturer",
-    progress: 72,
-    assignments: 8,
-    completed: 5,
-    classes: 3,
-    upcomingAssignment: "Database Assignment",
-    assignmentDescription: "SQL queries and database design",
-    deadline: "Due tomorrow",
-    nextClassTime: "11:00",
-    nextClassPeriod: "AM",
-    location: "Lab 02",
-    classType: "Lab",
-  },
-  {
-    name: "Object Oriented Programming",
-    code: "CS 2022",
-    lecturer: "Mr. Nimal Fernando",
-    lecturerRole: "Lecturer",
-    progress: 65,
-    assignments: 6,
-    completed: 4,
-    classes: 3,
-    upcomingAssignment: "Java OOP Assignment",
-    assignmentDescription: "Classes, objects and inheritance",
-    deadline: "Due in 3 days",
-    nextClassTime: "9:00",
-    nextClassPeriod: "AM",
-    location: "Room 304",
-    classType: "Lecture",
-  },
-  {
-    name: "Software Engineering",
-    code: "CS 2023",
-    lecturer: "Dr. Sanduni Silva",
-    lecturerRole: "Senior Lecturer",
-    progress: 80,
-    assignments: 5,
-    completed: 4,
-    classes: 3,
-    upcomingAssignment: "Software Design Report",
-    assignmentDescription: "Software architecture and design",
-    deadline: "Due next week",
-    nextClassTime: "1:00",
-    nextClassPeriod: "PM",
-    location: "Room 205",
-    classType: "Lecture",
-  },
-  {
-    name: "Data Structures & Algorithms",
-    code: "CS 2024",
-    lecturer: "Mr. Tharindu Jayasinghe",
-    lecturerRole: "Lecturer",
-    progress: 58,
-    assignments: 7,
-    completed: 3,
-    classes: 3,
-    upcomingAssignment: "Algorithm Analysis",
-    assignmentDescription: "Sorting and searching algorithms",
-    deadline: "Due in 4 days",
-    nextClassTime: "10:00",
-    nextClassPeriod: "AM",
-    location: "Lab 01",
-    classType: "Lab",
-  },
-  {
-    name: "Operating Systems",
-    code: "CS 2025",
-    lecturer: "Dr. Chamara Perera",
-    lecturerRole: "Senior Lecturer",
-    progress: 70,
-    assignments: 6,
-    completed: 4,
-    classes: 3,
-    upcomingAssignment: "Process Management",
-    assignmentDescription: "Processes, threads and scheduling",
-    deadline: "Due in 5 days",
-    nextClassTime: "2:00",
-    nextClassPeriod: "PM",
-    location: "Room 401",
-    classType: "Lecture",
-  },
-  {
-    name: "Computer Networks",
-    code: "CS 2026",
-    lecturer: "Mr. Kasun Silva",
-    lecturerRole: "Lecturer",
-    progress: 62,
-    assignments: 5,
-    completed: 3,
-    classes: 3,
-    upcomingAssignment: "Network Configuration",
-    assignmentDescription: "IP addressing and Packet Tracer",
-    deadline: "Due in 2 days",
-    nextClassTime: "8:00",
-    nextClassPeriod: "AM",
-    location: "Network Lab",
-    classType: "Practical",
-  },
-];
+import {
+  Course,
+  COURSES_KEY,
+  getCourses,
+} from "./course-storage";
 
 export default function CourseDetailsScreen() {
-  const { course } = useLocalSearchParams();
+  const params = useLocalSearchParams();
 
   const courseName =
-    typeof course === "string"
-      ? course
-      : "Database Management Systems";
+    typeof params.course === "string"
+      ? params.course
+      : "Course";
 
-  const selectedCourse =
-    courses.find((item) => item.name === courseName) || courses[0];
+  const courseCode =
+    typeof params.code === "string"
+      ? params.code
+      : "";
+
+  const [course, setCourse] = useState<Course | null>(null);
+
+  const [editModalVisible, setEditModalVisible] =
+    useState(false);
+
+  const [deleteModalVisible, setDeleteModalVisible] =
+    useState(false);
+
+  const [editName, setEditName] = useState("");
+  const [editCode, setEditCode] = useState("");
+  const [editLecturer, setEditLecturer] =
+    useState("");
+  const [editProgress, setEditProgress] =
+    useState("");
+
+  const [saving, setSaving] = useState(false);
+
+  const loadCourse = async () => {
+    try {
+      const courses = await getCourses();
+
+      const foundCourse = courses.find(
+        (item) =>
+          item.name === courseName &&
+          (courseCode === "" ||
+            item.code === courseCode),
+      );
+
+      if (foundCourse) {
+        setCourse(foundCourse);
+      } else {
+        setCourse(null);
+      }
+    } catch (error) {
+      console.log("Load course error:", error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCourse();
+    }, [courseName, courseCode]),
+  );
+
+  const openEditModal = () => {
+    if (!course) return;
+
+    setEditName(course.name);
+    setEditCode(course.code);
+    setEditLecturer(course.lecturer);
+    setEditProgress(String(course.progress));
+
+    setEditModalVisible(true);
+  };
+
+  const saveEdit = async () => {
+    if (!course) return;
+
+    const name = editName.trim();
+    const code = editCode.trim();
+    const lecturer = editLecturer.trim();
+    const progress = Number(editProgress);
+
+    if (!name) {
+      Alert.alert(
+        "Missing Course Name",
+        "Please enter the course name.",
+      );
+      return;
+    }
+
+    if (!code) {
+      Alert.alert(
+        "Missing Course Code",
+        "Please enter the course code.",
+      );
+      return;
+    }
+
+    if (!lecturer) {
+      Alert.alert(
+        "Missing Lecturer",
+        "Please enter the lecturer name.",
+      );
+      return;
+    }
+
+    if (
+      Number.isNaN(progress) ||
+      progress < 0 ||
+      progress > 100
+    ) {
+      Alert.alert(
+        "Invalid Progress",
+        "Progress must be between 0 and 100.",
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const courses = await getCourses();
+
+      const updatedCourses = courses.map(
+        (item) => {
+          if (item.id === course.id) {
+            return {
+              ...item,
+              name,
+              code,
+              lecturer,
+              progress,
+            };
+          }
+
+          return item;
+        },
+      );
+
+      await AsyncStorage.setItem(
+        COURSES_KEY,
+        JSON.stringify(updatedCourses),
+      );
+
+      const updatedCourse = updatedCourses.find(
+        (item) => item.id === course.id,
+      );
+
+      if (updatedCourse) {
+        setCourse(updatedCourse);
+      }
+
+      setEditModalVisible(false);
+
+      if (typeof window !== "undefined") {
+        window.alert(
+          "Course updated successfully!",
+        );
+      } else {
+        Alert.alert(
+          "Success",
+          "Course updated successfully!",
+        );
+      }
+    } catch (error) {
+      console.log("Edit course error:", error);
+
+      Alert.alert(
+        "Error",
+        "Unable to update the course.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!course) return;
+
+    try {
+      setSaving(true);
+
+      const courses = await getCourses();
+
+      const updatedCourses = courses.filter(
+        (item) => item.id !== course.id,
+      );
+
+      await AsyncStorage.setItem(
+        COURSES_KEY,
+        JSON.stringify(updatedCourses),
+      );
+
+      setDeleteModalVisible(false);
+
+      router.replace("/(tabs)/courses");
+    } catch (error) {
+      console.log("Delete course error:", error);
+
+      Alert.alert(
+        "Error",
+        "Unable to delete the course.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!course) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.notFound}>
+          <Ionicons
+            name="book-outline"
+            size={45}
+            color="#4F46E5"
+          />
+
+          <Text style={styles.notFoundTitle}>
+            Course not found
+          </Text>
+
+          <TouchableOpacity
+            style={styles.backButtonLarge}
+            onPress={() =>
+              router.replace("/(tabs)/courses")
+            }
+          >
+            <Text style={styles.backButtonText}>
+              Back to Courses
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -133,7 +259,7 @@ export default function CourseDetailsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={styles.headerButton}
             activeOpacity={0.8}
             onPress={() => router.back()}
           >
@@ -148,7 +274,17 @@ export default function CourseDetailsScreen() {
             Course Details
           </Text>
 
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            style={styles.headerButton}
+            activeOpacity={0.8}
+            onPress={openEditModal}
+          >
+            <Ionicons
+              name="create-outline"
+              size={21}
+              color="#4F46E5"
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Course Hero */}
@@ -162,11 +298,11 @@ export default function CourseDetailsScreen() {
           </View>
 
           <Text style={styles.courseName}>
-            {selectedCourse.name}
+            {course.name}
           </Text>
 
           <Text style={styles.courseCode}>
-            {selectedCourse.code}
+            {course.code}
           </Text>
 
           {/* Progress */}
@@ -177,7 +313,7 @@ export default function CourseDetailsScreen() {
               </Text>
 
               <Text style={styles.progressValue}>
-                {selectedCourse.progress}%
+                {course.progress}%
               </Text>
             </View>
 
@@ -186,7 +322,7 @@ export default function CourseDetailsScreen() {
                 style={[
                   styles.progressBar,
                   {
-                    width: `${selectedCourse.progress}%`,
+                    width: `${course.progress}%`,
                   },
                 ]}
               />
@@ -210,236 +346,274 @@ export default function CourseDetailsScreen() {
 
           <View style={styles.lecturerInfo}>
             <Text style={styles.lecturerName}>
-              {selectedCourse.lecturer}
+              {course.lecturer}
             </Text>
 
             <Text style={styles.lecturerRole}>
-              {selectedCourse.lecturerRole}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {}}
-          >
-            <Ionicons
-              name="mail-outline"
-              size={22}
-              color="#4F46E5"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Statistics */}
-        <Text style={styles.sectionTitle}>
-          Course Overview
-        </Text>
-
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Ionicons
-              name="document-text-outline"
-              size={23}
-              color="#4F46E5"
-            />
-
-            <Text style={styles.statNumber}>
-              {selectedCourse.assignments}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Assignments
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={23}
-              color="#4F46E5"
-            />
-
-            <Text style={styles.statNumber}>
-              {selectedCourse.completed}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Completed
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Ionicons
-              name="calendar-outline"
-              size={23}
-              color="#4F46E5"
-            />
-
-            <Text style={styles.statNumber}>
-              {selectedCourse.classes}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Classes
-            </Text>
-          </View>
-        </View>
-
-        {/* Upcoming Assignment */}
-        <Text style={styles.sectionTitle}>
-          Upcoming Assignment
-        </Text>
-
-        <TouchableOpacity
-          style={styles.assignmentCard}
-          activeOpacity={0.8}
-          onPress={() => router.push("/assignments")}
-        >
-          <View style={styles.assignmentIcon}>
-            <Ionicons
-              name="document-text"
-              size={23}
-              color="#4F46E5"
-            />
-          </View>
-
-          <View style={styles.assignmentInfo}>
-            <Text style={styles.assignmentTitle}>
-              {selectedCourse.upcomingAssignment}
-            </Text>
-
-            <Text style={styles.assignmentDescription}>
-              {selectedCourse.assignmentDescription}
-            </Text>
-
-            <Text style={styles.deadline}>
-              {selectedCourse.deadline}
+              Course Lecturer
             </Text>
           </View>
 
           <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
+            name="school-outline"
+            size={22}
+            color="#4F46E5"
           />
-        </TouchableOpacity>
-
-        {/* Next Class */}
-        <Text style={styles.sectionTitle}>
-          Next Class
-        </Text>
-
-        <TouchableOpacity
-          style={styles.classCard}
-          activeOpacity={0.8}
-          onPress={() => router.push("/schedule")}
-        >
-          <View style={styles.timeBox}>
-            <Text style={styles.time}>
-              {selectedCourse.nextClassTime}
-            </Text>
-
-            <Text style={styles.period}>
-              {selectedCourse.nextClassPeriod}
-            </Text>
-          </View>
-
-          <View style={styles.classInfo}>
-            <Text style={styles.classTitle}>
-              {selectedCourse.name}
-            </Text>
-
-            <View style={styles.locationRow}>
-              <Ionicons
-                name="location-outline"
-                size={14}
-                color="#64748B"
-              />
-
-              <Text style={styles.location}>
-                {selectedCourse.location}
-              </Text>
-            </View>
-
-            <Text style={styles.classType}>
-              {selectedCourse.classType}
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94A3B8"
-          />
-        </TouchableOpacity>
-
-        {/* Course Actions */}
-        <Text style={styles.sectionTitle}>
-          Quick Actions
-        </Text>
-
-        <View style={styles.actionsCard}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            activeOpacity={0.8}
-            onPress={() => router.push("/assignments")}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons
-                name="document-text-outline"
-                size={21}
-                color="#4F46E5"
-              />
-            </View>
-
-            <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>
-                View Assignments
-              </Text>
-
-              <Text style={styles.actionDescription}>
-                Check your course assignments
-              </Text>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#94A3B8"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            activeOpacity={0.8}
-            onPress={() => router.push("/schedule")}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons
-                name="calendar-outline"
-                size={21}
-                color="#4F46E5"
-              />
-            </View>
-
-            <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>
-                View Schedule
-              </Text>
-
-              <Text style={styles.actionDescription}>
-                Check upcoming classes
-              </Text>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#94A3B8"
-            />
-          </TouchableOpacity>
         </View>
+
+        {/* Course Information */}
+        <Text style={styles.sectionTitle}>
+          Course Information
+        </Text>
+
+        <View style={styles.card}>
+          <InfoRow
+            icon="code-outline"
+            label="Course Code"
+            value={course.code}
+          />
+
+          <InfoRow
+            icon="trending-up-outline"
+            label="Progress"
+            value={`${course.progress}%`}
+          />
+
+          <InfoRow
+            icon="person-outline"
+            label="Lecturer"
+            value={course.lecturer}
+            last
+          />
+        </View>
+
+        {/* Delete */}
+        <TouchableOpacity
+          style={styles.deleteButton}
+          activeOpacity={0.85}
+          onPress={() =>
+            setDeleteModalVisible(true)
+          }
+        >
+          <Ionicons
+            name="trash-outline"
+            size={20}
+            color="#EF4444"
+          />
+
+          <Text style={styles.deleteText}>
+            Delete Course
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() =>
+          setEditModalVisible(false)
+        }
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Edit Course
+              </Text>
+
+              <TouchableOpacity
+                onPress={() =>
+                  setEditModalVisible(false)
+                }
+              >
+                <Ionicons
+                  name="close"
+                  size={25}
+                  color="#64748B"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>
+              Course Name
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Course name"
+              placeholderTextColor="#94A3B8"
+            />
+
+            <Text style={styles.inputLabel}>
+              Course Code
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              value={editCode}
+              onChangeText={setEditCode}
+              placeholder="Course code"
+              placeholderTextColor="#94A3B8"
+              autoCapitalize="characters"
+            />
+
+            <Text style={styles.inputLabel}>
+              Lecturer
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              value={editLecturer}
+              onChangeText={setEditLecturer}
+              placeholder="Lecturer"
+              placeholderTextColor="#94A3B8"
+            />
+
+            <Text style={styles.inputLabel}>
+              Progress (%)
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              value={editProgress}
+              onChangeText={setEditProgress}
+              placeholder="0 - 100"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+              maxLength={3}
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                saving && styles.disabledButton,
+              ]}
+              activeOpacity={0.85}
+              onPress={saveEdit}
+              disabled={saving}
+            >
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#FFFFFF"
+              />
+
+              <Text style={styles.saveButtonText}>
+                {saving
+                  ? "Saving..."
+                  : "Save Changes"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setDeleteModalVisible(false)
+        }
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModal}>
+            <View style={styles.deleteIcon}>
+              <Ionicons
+                name="trash-outline"
+                size={27}
+                color="#EF4444"
+              />
+            </View>
+
+            <Text style={styles.deleteTitle}>
+              Delete Course?
+            </Text>
+
+            <Text style={styles.deleteDescription}>
+              Are you sure you want to delete{" "}
+              <Text style={styles.bold}>
+                {course.name}
+              </Text>
+              ? This action cannot be undone.
+            </Text>
+
+            <View style={styles.deleteActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                activeOpacity={0.8}
+                onPress={() =>
+                  setDeleteModalVisible(false)
+                }
+              >
+                <Text style={styles.cancelText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.confirmDeleteButton,
+                  saving && styles.disabledButton,
+                ]}
+                activeOpacity={0.8}
+                onPress={confirmDelete}
+                disabled={saving}
+              >
+                <Text style={styles.confirmDeleteText}>
+                  {saving
+                    ? "Deleting..."
+                    : "Delete"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+  last = false,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.infoRow,
+        last && styles.lastRow,
+      ]}
+    >
+      <View style={styles.infoIcon}>
+        <Ionicons
+          name={icon}
+          size={20}
+          color="#4F46E5"
+        />
+      </View>
+
+      <View style={styles.infoContent}>
+        <Text style={styles.infoLabel}>
+          {label}
+        </Text>
+
+        <Text style={styles.infoValue}>
+          {value}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -463,7 +637,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
 
-  backButton: {
+  headerButton: {
     width: 44,
     height: 44,
     borderRadius: 14,
@@ -478,10 +652,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: "#111827",
-  },
-
-  headerSpacer: {
-    width: 44,
   },
 
   heroCard: {
@@ -564,8 +734,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 17,
     padding: 17,
-    flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
@@ -596,152 +764,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
-  statCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  statNumber: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#111827",
-    marginTop: 8,
-  },
-
-  statLabel: {
-    fontSize: 10,
-    color: "#64748B",
-    marginTop: 3,
-    textAlign: "center",
-  },
-
-  assignmentCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 17,
-    padding: 17,
+  infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  assignmentIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  assignmentInfo: {
-    flex: 1,
-    marginLeft: 13,
-  },
-
-  assignmentTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  assignmentDescription: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 4,
-  },
-
-  deadline: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#EF4444",
-    marginTop: 6,
-  },
-
-  classCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 17,
-    padding: 17,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  timeBox: {
-    width: 60,
-    alignItems: "center",
-    marginRight: 15,
-  },
-
-  time: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#4F46E5",
-  },
-
-  period: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 2,
-  },
-
-  classInfo: {
-    flex: 1,
-  },
-
-  classTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 5,
-  },
-
-  location: {
-    fontSize: 12,
-    color: "#64748B",
-    marginLeft: 4,
-  },
-
-  classType: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#4F46E5",
-    marginTop: 4,
-  },
-
-  actionsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 17,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
+    paddingVertical: 13,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
 
-  actionIcon: {
+  lastRow: {
+    borderBottomWidth: 0,
+  },
+
+  infoIcon: {
     width: 42,
     height: 42,
     borderRadius: 12,
@@ -751,19 +786,207 @@ const styles = StyleSheet.create({
     marginRight: 13,
   },
 
-  actionInfo: {
+  infoContent: {
     flex: 1,
   },
 
-  actionTitle: {
+  infoLabel: {
+    fontSize: 11,
+    color: "#94A3B8",
+  },
+
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginTop: 3,
+  },
+
+  deleteButton: {
+    height: 52,
+    borderRadius: 15,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    marginTop: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  deleteText: {
+    color: "#EF4444",
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "flex-end",
+  },
+
+  modalCard: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 24,
+    paddingBottom: 35,
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 22,
+  },
+
+  modalTitle: {
+    fontSize: 21,
+    fontWeight: "800",
     color: "#111827",
   },
 
-  actionDescription: {
+  inputLabel: {
     fontSize: 12,
+    fontWeight: "700",
+    color: "#334155",
+    marginBottom: 7,
+    marginTop: 12,
+  },
+
+  input: {
+    height: 50,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: "#111827",
+  },
+
+  saveButton: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: "#4F46E5",
+    marginTop: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  disabledButton: {
+    opacity: 0.6,
+  },
+
+  deleteModal: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 24,
+    borderRadius: 22,
+    padding: 24,
+  },
+
+  deleteIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "#FEF2F2",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: 15,
+  },
+
+  deleteTitle: {
+    fontSize: 21,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
+  },
+
+  deleteDescription: {
+    fontSize: 13,
+    lineHeight: 20,
     color: "#64748B",
-    marginTop: 3,
+    textAlign: "center",
+    marginTop: 8,
+  },
+
+  bold: {
+    fontWeight: "800",
+    color: "#334155",
+  },
+
+  deleteActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 22,
+  },
+
+  cancelButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 13,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  cancelText: {
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  confirmDeleteButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 13,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  confirmDeleteText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  notFound: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+
+  notFoundTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#111827",
+    marginTop: 15,
+  },
+
+  backButtonLarge: {
+    marginTop: 20,
+    backgroundColor: "#4F46E5",
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 13,
+  },
+
+  backButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

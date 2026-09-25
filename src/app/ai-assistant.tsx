@@ -36,39 +36,71 @@ export default function AIAssistantScreen() {
     },
   ]);
 
-  const sendMessage = (text?: string) => {
-    const messageText = (text ?? message).trim();
+  const sendMessage = async (text?: string) => {
+  const messageText = (text ?? message).trim();
 
-    if (!messageText) return;
+  if (!messageText) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: messageText,
-      sender: "user",
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    text: messageText,
+    sender: "user",
+  };
+
+  setMessages((previous) => [
+    ...previous,
+    userMessage,
+  ]);
+
+  setMessage("");
+
+  try {
+    const response = await fetch(
+      "http://192.168.65.25/api/chat",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: messageText,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "AI request failed",
+      );
+    }
+
+    const aiMessage: Message = {
+      id: `${Date.now()}-ai`,
+      text: data.reply,
+      sender: "ai",
     };
 
     setMessages((previous) => [
       ...previous,
-      userMessage,
+      aiMessage,
     ]);
+  } catch (error) {
+    console.log("AI request error:", error);
 
-    setMessage("");
+    const errorMessage: Message = {
+      id: `${Date.now()}-error`,
+      text: "Sorry, I couldn't connect to the AI server. Please try again.",
+      sender: "ai",
+    };
 
-    // Temporary AI response.
-    // We will connect the real AI here later.
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: `${Date.now()}-ai`,
-        text: "That's a great question! 🤖 I'll be able to give you a detailed answer once the AI service is connected.",
-        sender: "ai",
-      };
-
-      setMessages((previous) => [
-        ...previous,
-        aiMessage,
-      ]);
-    }, 500);
-  };
+    setMessages((previous) => [
+      ...previous,
+      errorMessage,
+    ]);
+  }
+};
 
   return (
     <KeyboardAvoidingView

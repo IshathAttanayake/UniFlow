@@ -608,6 +608,38 @@ const loadUpcomingAssignments = async () => {
   </View>
 )}
 
+{/* AI Assistant */}
+<TouchableOpacity
+  style={styles.aiCard}
+  activeOpacity={0.85}
+  onPress={() => router.push("/ai-assistant")}
+>
+  <View style={styles.aiIconBox}>
+    <Ionicons
+      name="sparkles"
+      size={24}
+      color="#4F46E5"
+    />
+  </View>
+
+  <View style={styles.aiInfo}>
+    <Text style={styles.aiTitle}>
+      UniFlow AI Assistant
+    </Text>
+
+    <Text style={styles.aiText}>
+      Ask questions about your studies, grades,
+      assignments and schedule.
+    </Text>
+  </View>
+
+  <Ionicons
+    name="chevron-forward"
+    size={20}
+    color="#94A3B8"
+  />
+</TouchableOpacity>
+
 
         {/* Today's Classes */}
         {todayClasses.length > 0 ? (
@@ -681,7 +713,6 @@ const loadUpcomingAssignments = async () => {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -952,5 +983,44 @@ emptyAssignmentIcon: {
 
 overdueDeadline: {
   color: "#DC2626",
+},
+
+aiCard: {
+  marginTop: 16,
+  backgroundColor: "#FFFFFF",
+  borderRadius: 18,
+  padding: 16,
+  flexDirection: "row",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+},
+
+aiIconBox: {
+  width: 48,
+  height: 48,
+  borderRadius: 14,
+  backgroundColor: "#EEF2FF",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+aiInfo: {
+  flex: 1,
+  marginLeft: 13,
+  marginRight: 8,
+},
+
+aiTitle: {
+  fontSize: 15,
+  fontWeight: "800",
+  color: "#111827",
+},
+
+aiText: {
+  fontSize: 12,
+  lineHeight: 17,
+  color: "#64748B",
+  marginTop: 4,
 },
 });

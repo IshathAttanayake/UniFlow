@@ -56,7 +56,7 @@ export default function AIAssistantScreen() {
 
   try {
     const response = await fetch(
-      "http://192.168.65.25/api/chat",
+      "http://192.168.65.25:3001/api/chat",
       {
         method: "POST",
         headers: {
